@@ -1,0 +1,11 @@
+# Copy to .dev.vars. Never commit real credentials.
+# Local overrides for wrangler.jsonc. Use your HTTPS origin for remote/LAN sign-in.
+APP_URL=http://localhost:4321
+GITHUB_CLIENT_ID=
+GITHUB_APP_SLUG=
+GITHUB_CLIENT_SECRET=
+# Optional server-only token. Use a fine-grained PAT with Public repositories (read-only).
+# Never use a PUBLIC_ prefix or put this token in wrangler.jsonc.
+GITHUB_PUBLIC_TOKEN=
+# Base64-encoded 32-byte random key; generate with: openssl rand -base64 32
+SESSION_KEY=

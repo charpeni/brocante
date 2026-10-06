@@ -1,0 +1,26 @@
+{
+  "name": "brocante",
+  "version": "1.0.0",
+  "description": "Generate local pull-request reports from GitHub.",
+  "bin": {
+    "brocante": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "prepack": "pnpm build"
+  },
+  "devDependencies": {
+    "@brocante/core": "workspace:*",
+    "esbuild": "^0.28.1"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

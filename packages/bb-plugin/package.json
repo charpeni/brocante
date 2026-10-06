@@ -1,0 +1,34 @@
+{
+  "name": "bb-plugin-brocante",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Read GitHub pull-request reports in BB.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs && bb plugin build",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "verify:bundle": "node scripts/build.mjs --check",
+    "verify:tag": "node scripts/check-tag.mjs"
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.15",
+    "bb-app": "0.45.0",
+    "esbuild": "^0.28.1"
+  },
+  "engines": {
+    "bb": ">=0.45",
+    "bbPluginSdk": ">=0.6.15 <0.7"
+  },
+  "bb": {
+    "name": "Brocante",
+    "description": "Read GitHub pull-request reports without leaving BB.",
+    "branding": {
+      "icon": "./assets/icon.svg"
+    },
+    "server": "./server.js",
+    "skills": [
+      "skills"
+    ]
+  }
+}

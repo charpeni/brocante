@@ -1,0 +1,8 @@
+---
+import MarketplacePage from '../../layouts/MarketplacePage.astro';
+import { parseRepository } from '../../lib/market';
+
+const repository = parseRepository(`${Astro.params.owner}/${Astro.params.repo}`);
+if (!repository) return new Response('Repository not found.', { status: 404 });
+---
+<MarketplacePage repository={`${repository.owner}/${repository.repo}`} />

@@ -1,0 +1,34 @@
+{
+  "name": "brocante-workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @brocante/web dev",
+    "setup:github": "pnpm --filter @brocante/web setup:github",
+    "build": "pnpm -r --if-present build",
+    "build:web": "pnpm --filter @brocante/web build",
+    "build:cli": "pnpm --filter brocante build",
+    "build:plugin": "pnpm --filter bb-plugin-brocante build",
+    "preview": "pnpm --filter @brocante/web preview",
+    "deploy": "pnpm --filter @brocante/web deploy",
+    "check": "pnpm -r --if-present check",
+    "lint": "oxlint --deny-warnings",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "test": "vitest run",
+    "test:e2e": "pnpm --filter @brocante/web test:e2e",
+    "validate": "pnpm lint && pnpm format:check && pnpm check && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "esbuild": "^0.28.1",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@12.8.1"
+}

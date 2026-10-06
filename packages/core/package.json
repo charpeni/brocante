@@ -1,0 +1,19 @@
+{
+  "name": "@brocante/core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./github": "./src/github.ts",
+    "./market": "./src/market.ts",
+    "./market-search": "./src/market-search.ts",
+    "./retry": "./src/retry.ts",
+    "./demo": "./src/demo.ts",
+    "./market-location": "./src/market-location.ts"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}

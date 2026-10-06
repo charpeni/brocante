@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "review-market",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-10-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "binding": "ASSETS", "directory": "./dist" },
+  "vars": {
+    "APP_URL": "http://localhost:4321",
+    "GITHUB_CLIENT_ID": "",
+    "GITHUB_APP_SLUG": "",
+  },
+  "observability": { "enabled": false },
+}

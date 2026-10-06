@@ -1,0 +1,8 @@
+---
+import MarketplacePage from '../layouts/MarketplacePage.astro';
+import { marketLocation, marketPath } from '../lib/market-location';
+
+const location = marketLocation(Astro.url);
+if (location.repository) return Astro.redirect(marketPath(location.repository, location.search), 302);
+---
+<MarketplacePage />

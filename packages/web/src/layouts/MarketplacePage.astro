@@ -1,0 +1,27 @@
+---
+import Marketplace from '../components/Marketplace';
+import '../styles/app.css';
+interface Props { repository?: string }
+const { repository } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#264B3D" />
+    <meta name="description" content="Brocante is a 3D marketplace for your repository’s pull requests." />
+    <link rel="icon" href="/favicon.ico?v=stall-2" sizes="16x16 32x32" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=stall-2" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=stall-2" sizes="180x180" />
+    <title>{repository ? `${repository} · Brocante` : 'Brocante — a marketplace for pull requests'}</title>
+  </head>
+  <body>
+    <Marketplace
+      client:load
+      initialLocation={{ repository: repository ?? '', search: Astro.url.searchParams.get('q') ?? '' }}
+      initialAuthError={Astro.url.searchParams.get('auth_error')}
+    />
+    <noscript><p class="notice no-script-notice">This interactive marketplace requires JavaScript. You can still review pull requests directly on <a href="https://github.com">GitHub</a>.</p></noscript>
+  </body>
+</html>

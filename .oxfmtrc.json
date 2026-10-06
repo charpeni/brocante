@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "useTabs": false,
+  "tabWidth": 2,
+  "singleQuote": true,
+  "printWidth": 100,
+  "ignorePatterns": [
+    "dist",
+    ".astro",
+    ".wrangler",
+    "pnpm-lock.yaml",
+    "docs/prototype.html",
+    "**/dist/**",
+    "**/.astro/**",
+    "**/.wrangler/**",
+    ".serena/**",
+    "packages/bb-plugin/server.js"
+  ]
+}

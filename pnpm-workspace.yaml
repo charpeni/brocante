@@ -1,0 +1,8 @@
+packages:
+  - packages/*
+allowBuilds:
+  esbuild: true
+  workerd: true
+  sharp: true
+  '@parcel/watcher': false
+  node-pty: false
