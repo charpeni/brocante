@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 let directory: string;
 let entry: string;
+
 beforeAll(async () => {
   directory = await mkdtemp(join(tmpdir(), 'brocante-cli-pipe-'));
   entry = join(directory, 'cli.mjs');
@@ -20,6 +21,7 @@ beforeAll(async () => {
     target: 'node22',
   });
 });
+
 afterAll(async () => {
   await rm(directory, { recursive: true, force: true });
 });

@@ -9,10 +9,12 @@ import {
   challenge,
   type AppEnv,
 } from './auth';
+
 const env: AppEnv = {
   APP_URL: 'https://market.example',
   SESSION_KEY: btoa('0123456789abcdef0123456789abcdef'),
 };
+
 describe('stateless encrypted authentication', () => {
   it('conceals a token and restores it only for the expected purpose', async () => {
     const value = await seal(

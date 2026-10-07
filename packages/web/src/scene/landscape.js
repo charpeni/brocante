@@ -221,6 +221,7 @@ export class MarketLandscape {
     Object.values(shapes).forEach((geometry) => geometry.dispose());
     this.setSeason(currentSeason());
   }
+
   setSeason(season) {
     const palette = palettes[season];
     if (!palette) return;

@@ -1,5 +1,7 @@
 export type ShopState = 'awaiting' | 'requested' | 'draft' | 'author' | 'ready';
+
 export type ReviewDecision = 'APPROVED' | 'CHANGES_REQUESTED' | 'REVIEW_REQUIRED' | null;
+
 export interface PullRequest {
   number: number;
   title: string;
@@ -19,6 +21,7 @@ export interface PullRequest {
   requestedReviewers: string[];
   labels: string[];
 }
+
 export interface MarketData {
   repository: string;
   url: string;
@@ -39,6 +42,7 @@ export interface MarketData {
     asOf: string;
   };
 }
+
 export const stateLabels: Record<ShopState, string> = {
   awaiting: 'Review welcome',
   requested: 'Review requested',
@@ -46,6 +50,7 @@ export const stateLabels: Record<ShopState, string> = {
   author: 'Changes requested',
   ready: 'Approved',
 };
+
 export function shopState(pr: PullRequest): ShopState | null {
   if (pr.state !== 'OPEN') return null;
   if (pr.isDraft) return 'draft';
@@ -54,13 +59,16 @@ export function shopState(pr: PullRequest): ShopState | null {
   if (pr.reviewDecision === 'APPROVED') return 'ready';
   return 'awaiting';
 }
+
 export const shopDoor = (state: ShopState) =>
   state === 'author' || state === 'draft' ? 'BACK SOON' : state === 'ready' ? 'CLOSED' : 'OPEN';
 
 export const isOpen = (state: ShopState) => state === 'awaiting' || state === 'requested';
+
 export function ageHours(createdAt: string, now = Date.now()) {
   return Math.max(0, (now - new Date(createdAt).getTime()) / 3_600_000);
 }
+
 export function ageText(createdAt: string) {
   const hours = ageHours(createdAt);
   return hours < 1
@@ -69,6 +77,7 @@ export function ageText(createdAt: string) {
       ? `${Math.floor(hours)}h old`
       : `${Math.floor(hours / 24)}d old`;
 }
+
 export function parseRepository(input: string): { owner: string; repo: string } | null {
   let value = input.trim();
   if (value.startsWith('https://github.com/')) value = value.slice(19);
@@ -77,6 +86,7 @@ export function parseRepository(input: string): { owner: string; repo: string } 
   if (!match || ['.', '..'].includes(match[2])) return null;
   return { owner: match[1], repo: match[2] };
 }
+
 export function pullRequestDiff(pr: Pick<PullRequest, 'additions' | 'deletions' | 'changedFiles'>) {
   const { additions, deletions, changedFiles } = pr;
   if (

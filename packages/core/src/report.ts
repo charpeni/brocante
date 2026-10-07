@@ -8,7 +8,9 @@ export interface Report extends Omit<MarketData, 'nextCursor'> {
   complete: boolean;
   demo?: true;
 }
+
 export type ReportFormat = 'html' | 'markdown' | 'json';
+
 export interface ReportOptions {
   repository: string;
   token: string;
@@ -22,15 +24,18 @@ export async function generateReport(options: ReportOptions): Promise<Report> {
   const repository = parseRepository(options.repository);
   if (!repository) throw new Error('Use a repository in owner/name format.');
   if (!options.token.trim()) throw new Error('A GitHub token is required.');
+
   const maxPages = options.maxPages ?? 10;
   if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > 100)
     throw new Error('maxPages must be an integer from 1 to 100.');
+
   const search = options.search?.trim() ?? '';
   const requests = new Map<number, MarketData['pullRequests'][number]>();
   const cursors = new Set<string>();
   let cursor: string | null = null;
   let snapshot: MarketData | undefined;
   let pagesFetched = 0;
+
   do {
     const page = await loadMarket(
       options.token,
@@ -40,12 +45,14 @@ export async function generateReport(options: ReportOptions): Promise<Report> {
       options.fetcher,
       search,
     );
+
     // Never combine data from different repositories or visibility boundaries.
     if (
       snapshot &&
       (page.repository !== snapshot.repository || page.isPrivate !== snapshot.isPrivate)
     )
       throw new GitHubError('Repository access changed during the report. Please retry.', 403);
+
     snapshot ??= page;
     for (const pr of page.pullRequests) requests.set(pr.number, pr);
     pagesFetched++;
@@ -54,6 +61,7 @@ export async function generateReport(options: ReportOptions): Promise<Report> {
       throw new GitHubError('GitHub repeated a page cursor. Please retry.', 502, 60);
     if (cursor) cursors.add(cursor);
   } while (cursor && pagesFetched < maxPages);
+
   return reportFromSnapshot(
     { ...snapshot!, pullRequests: [...requests.values()], nextCursor: cursor },
     search,
@@ -63,6 +71,7 @@ export async function generateReport(options: ReportOptions): Promise<Report> {
 
 export function reportFromSnapshot(data: MarketData, search = '', pagesFetched = 1): Report {
   const { nextCursor, ...snapshot } = data;
+
   return {
     ...snapshot,
     searchLimited: data.searchLimited ?? false,
@@ -82,11 +91,14 @@ const escapeHtml = (value: string | number) =>
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
+
 const escapeMarkdown = (value: string | number) =>
   String(value)
     .replace(/[\r\n\t]/g, ' ')
     .replace(/[\\`*_{}[\]()#+!|<>~]/g, '\\$&');
+
 const status = (pr: MarketData['pullRequests'][number]) => stateLabels[shopState(pr) ?? 'ready'];
+
 const githubUrl = (report: Report, number?: number) => {
   const repository = parseRepository(report.repository);
   if (!repository) throw new Error('Invalid report repository.');
@@ -99,6 +111,7 @@ export function renderReport(
   options: { partialHint?: string } = {},
 ): string {
   if (format === 'json') return JSON.stringify(report, null, 2) + '\n';
+
   const count = `${report.pullRequests.length} of ${report.total} matching open pull requests`;
   const coverage = report.complete
     ? 'All available pages fetched.'
@@ -110,6 +123,7 @@ export function renderReport(
   const footer = report.demo
     ? 'Fictional demo for exploring Brocante. No live GitHub data.'
     : 'Snapshot of GitHub data; counts can lag and requests can change during pagination.';
+
   if (format === 'markdown')
     return [
       `# Brocante — ${escapeMarkdown(report.repository)}`,
@@ -132,7 +146,9 @@ export function renderReport(
       footer,
       '',
     ].join('\n');
+
   if (format !== 'html') throw new Error('Choose html, markdown, or json.');
+
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">

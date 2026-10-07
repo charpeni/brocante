@@ -13,6 +13,7 @@ const PALETTE = {
   Data: 0xd3af58,
   Infra: 0x68899c,
 };
+
 // Same strong ease-out curve as the UI motion guidance: cubic-bezier(.23, 1, .32, 1).
 function easeOut(progress) {
   let lo = 0,
@@ -26,6 +27,7 @@ function easeOut(progress) {
   }
   return 1 - Math.pow(1 - t, 3);
 }
+
 const STATES = {
   awaiting: 0x396e4a,
   requested: 0x396e4a,
@@ -34,6 +36,7 @@ const STATES = {
   ready: 0x8b7b9a,
 };
 const stateTextures = new Map();
+
 function stateTexture(status) {
   if (stateTextures.has(status)) return stateTextures.get(status);
   const canvas = document.createElement('canvas');
@@ -63,16 +66,20 @@ function stateTexture(status) {
   stateTextures.set(status, texture);
   return texture;
 }
+
 const materials = new Map();
+
 const material = (color) => {
   if (!materials.has(color))
     materials.set(color, new THREE.MeshLambertMaterial({ color, flatShading: true }));
   return materials.get(color);
 };
+
 const cube = new THREE.BoxGeometry(1, 1, 1);
 const cylinder = new THREE.CylinderGeometry(1, 1, 1, 10);
 const ball = new THREE.IcosahedronGeometry(1, 0);
 const cone = new THREE.ConeGeometry(1, 1, 6);
+
 function mesh(parent, geometry, color, position, scale, rotation) {
   const m = new THREE.Mesh(geometry, material(color));
   m.position.set(...position);
@@ -83,9 +90,13 @@ function mesh(parent, geometry, color, position, scale, rotation) {
   parent.add(m);
   return m;
 }
+
 const box = (p, c, pos, scale, rot) => mesh(p, cube, c, pos, scale, rot);
+
 const cyl = (p, c, pos, scale, rot) => mesh(p, cylinder, c, pos, scale, rot);
+
 const sphere = (p, c, pos, scale) => mesh(p, ball, c, pos, scale);
+
 function bake(source) {
   // Merge the static pieces by material so busy markets don't draw each plank separately.
   source.updateMatrixWorld(true);
@@ -106,6 +117,7 @@ function bake(source) {
   }
   return out;
 }
+
 function person(shirt, seed = 0) {
   const p = new THREE.Group();
   const skin = [0xd0a27c, 0x9f7052, 0xf0c8a0, 0xb88c65][seed % 4];
@@ -141,11 +153,13 @@ function person(shirt, seed = 0) {
   });
   return body;
 }
+
 function crate(p, x, z, s = 0.62) {
   box(p, 0xb58b5d, [x, s / 2, z], [s, s, s]);
   for (let i = 0; i < 3; i++)
     box(p, 0x8d6947, [x, 0.15 + (i * s) / 3, z + s / 2 + 0.008], [s, 0.045, 0.025]);
 }
+
 function stallGeometry(skill, type, wear = 0) {
   const fade = (color, target, amount) =>
     new THREE.Color(color).lerp(new THREE.Color(target), amount).getHex();
@@ -291,6 +305,7 @@ function stallGeometry(skill, type, wear = 0) {
   }
   return bake(g);
 }
+
 function decoration() {
   const g = new THREE.Group();
   const ground = mesh(
@@ -375,6 +390,7 @@ function decoration() {
   }
   return result;
 }
+
 // SwiftShader and llvmpipe still create contexts despite failIfMajorPerformanceCaveat, so check the renderer name.
 function softwareRenderer() {
   const gl = document.createElement('canvas').getContext('webgl2');
@@ -384,6 +400,7 @@ function softwareRenderer() {
   gl.getExtension('WEBGL_lose_context')?.loseContext();
   return /swiftshader|llvmpipe|software/i.test(name);
 }
+
 export class MarketWorld {
   constructor(container, onChoose, onHover) {
     this.container = container;
@@ -473,6 +490,7 @@ export class MarketWorld {
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
   }
+
   dispose() {
     this.disposed = true;
     this.onEntranceComplete = null;
@@ -510,6 +528,7 @@ export class MarketWorld {
     this.renderer.forceContextLoss();
     this.renderer.domElement.remove();
   }
+
   positions(count) {
     const rings =
       count > 36
@@ -533,6 +552,7 @@ export class MarketWorld {
     }
     return points;
   }
+
   setShops(shops, clockHours = this.clockHours ?? 0) {
     if (this.entrance) this.finishEntrance();
     this.shadowsDirty = true;
@@ -667,12 +687,14 @@ export class MarketWorld {
     });
     this.render();
   }
+
   updateShopFront(s) {
     const closed = ['author', 'draft', 'ready'].includes(s.shop.status);
     s.closedFront.visible = closed;
     s.owner.visible = !closed;
     s.stateSign.material.map = stateTexture(s.shop.status);
   }
+
   setAge(clockHours) {
     this.shadowsDirty = true;
     this.clockHours = clockHours;
@@ -693,6 +715,7 @@ export class MarketWorld {
     }
     // The caller refreshes filters and renders once after all shops have aged.
   }
+
   highlight(ids, selected) {
     this.shadowsDirty = true;
     this.selected = selected;
@@ -723,6 +746,7 @@ export class MarketWorld {
     }
     this.render();
   }
+
   resize() {
     const { width, height } = this.container.getBoundingClientRect();
     if (!width || !height) return;
@@ -732,6 +756,7 @@ export class MarketWorld {
     this.updateCamera();
     this.render();
   }
+
   updateCamera() {
     const aspect = this.width / this.height,
       span = Math.max(46, 50 / aspect);
@@ -749,6 +774,7 @@ export class MarketWorld {
     this.camera.updateProjectionMatrix();
     this.camera.updateMatrixWorld();
   }
+
   render(ambientOnly = false) {
     if (this.disposed || this.contextLost) return;
     if (!ambientOnly) this.updateCamera();
@@ -760,6 +786,7 @@ export class MarketWorld {
     if (!ambientOnly) this.onRender?.();
     else this.onAmbientRender?.();
   }
+
   project(id, height = 5.65) {
     const s = this.stalls.get(id);
     if (!s) return null;
@@ -771,6 +798,7 @@ export class MarketWorld {
       z: position.z,
     };
   }
+
   startEntrance() {
     if (this.entranceStarted || this.disposed) return;
     this.entranceStarted = true;
@@ -800,6 +828,7 @@ export class MarketWorld {
       frame(start);
     });
   }
+
   finishEntrance() {
     if (this.entranceFrame != null) cancelAnimationFrame(this.entranceFrame);
     this.entranceFrame = null;
@@ -814,6 +843,7 @@ export class MarketWorld {
       this.onEntranceComplete?.();
     }
   }
+
   setSeason(season) {
     if (!['spring', 'summer', 'autumn', 'winter'].includes(season)) return;
     this.landscape.setSeason(season);
@@ -825,6 +855,7 @@ export class MarketWorld {
     this.shadowsDirty = true;
     this.render();
   }
+
   animate(key, duration, apply) {
     this.animations ??= new Map();
     const token = {};
@@ -845,6 +876,7 @@ export class MarketWorld {
     };
     requestAnimationFrame(frame);
   }
+
   focus(id, animate = true) {
     this.finishEntrance();
     const s = this.stalls.get(id);
@@ -862,6 +894,7 @@ export class MarketWorld {
       this.render();
     }
   }
+
   home(animate = true) {
     this.finishEntrance();
     const start = this.lookTarget.clone(),
@@ -878,6 +911,7 @@ export class MarketWorld {
       this.render();
     }
   }
+
   turn(delta, animate = true) {
     this.finishEntrance();
     const start = this.angle;
@@ -893,12 +927,14 @@ export class MarketWorld {
       this.render();
     }
   }
+
   zoomBy(delta) {
     this.finishEntrance();
     this.animations?.delete('camera');
     this.zoom = THREE.MathUtils.clamp(this.zoom + delta, 0.75, 2.6);
     this.render();
   }
+
   pick(event) {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.set(
@@ -908,6 +944,7 @@ export class MarketWorld {
     this.raycaster.setFromCamera(this.pointer, this.camera);
     return this.raycaster.intersectObjects(this.hitboxes, false)[0]?.object.userData.shopId;
   }
+
   bindPointer() {
     const canvas = this.renderer.domElement;
     let drag = null;

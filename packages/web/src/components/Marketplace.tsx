@@ -63,20 +63,25 @@ function DiffStats({ pr }: { pr: PullRequest }) {
     </p>
   );
 }
+
 interface Session {
   configured: boolean;
   publicAccess?: boolean;
   login: string | null;
   installUrl: string | null;
 }
+
 interface MarketplaceProps {
   initialLocation: { repository: string; search: string };
   initialAuthError: string | null;
 }
+
 // Keep the server render and first hydration render identical; demo dates and WebGL
 // become visible only after the browser takes over the already-rendered shell.
 const subscribeToHydration = () => () => {};
+
 const rejectedSearch = (error: unknown) => error instanceof ApiError && error.status === 400;
+
 function App({ initialLocation, initialAuthError }: MarketplaceProps) {
   const hydrated = useSyncExternalStore(
     subscribeToHydration,
@@ -252,6 +257,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
   if (selected !== null && !chosen) setSelected(null);
   const opener = useRef<HTMLElement | null>(null);
   const previousSelection = useRef<number | undefined>(undefined);
+
   function openShop(id: number) {
     setExpandedTitle(false);
     const active = document.activeElement;
@@ -263,6 +269,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
         : null;
     setSelected(id);
   }
+
   const selectedNumber = chosen?.number;
   useEffect(() => {
     if (selectedNumber !== undefined) heading.current?.focus({ preventScroll: true });
@@ -294,6 +301,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [searchOptions]);
+
   function switchRepository(value: string) {
     setEditingRepository(false);
     setRepository(value);
@@ -307,6 +315,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
     window.history.pushState(null, '', marketPath(value));
     cache.removeQueries({ queryKey: ['market'], type: 'inactive' });
   }
+
   function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     const parsed = parseRepository(input);
@@ -317,6 +326,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
     setInputError('');
     switchRepository(`${parsed.owner}/${parsed.repo}`);
   }
+
   function runSearch(value: string) {
     if (repository && (waiting || !canBrowse)) return;
     const query = value.trim();
@@ -333,6 +343,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
     if (path !== window.location.pathname + window.location.search)
       window.history.pushState(null, '', path);
   }
+
   useEffect(() => {
     const navigate = () => {
       const location = marketLocation(new URL(window.location.href));
@@ -1055,6 +1066,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
     </div>
   );
 }
+
 export default function Marketplace(props: MarketplaceProps) {
   const [client] = useState(() => new QueryClient());
   return (

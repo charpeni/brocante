@@ -6,14 +6,17 @@ import { runCli } from './run';
 import { version } from '../package.json';
 
 const directories: string[] = [];
+
 afterEach(async () => {
   await Promise.all(
     directories.splice(0).map((path) => rm(path, { recursive: true, force: true })),
   );
 });
+
 function io() {
   return { env: {}, stdout: vi.fn(), stderr: vi.fn(), ghToken: vi.fn(async () => '') };
 }
+
 it('supports help and version without accessing credentials', async () => {
   const output = io();
   expect(await runCli(['--help'], output)).toBe(0);
@@ -21,6 +24,7 @@ it('supports help and version without accessing credentials', async () => {
   expect(output.stdout).toHaveBeenLastCalledWith(`${version}\n`);
   expect(output.ghToken).not.toHaveBeenCalled();
 });
+
 it('generates offline HTML and refuses accidental overwrite', async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'brocante-cli-'));
   directories.push(cwd);
@@ -33,6 +37,7 @@ it('generates offline HTML and refuses accidental overwrite', async () => {
   expect(output.stderr).toHaveBeenLastCalledWith(expect.stringContaining('Use --force'));
   expect(await runCli(['--demo', '--output', 'report.html', '--force'], output)).toBe(0);
 });
+
 it('emits parseable JSON without status text in stdout', async () => {
   const output = io();
   expect(await runCli(['--demo', '--format', 'json'], output)).toBe(0);
@@ -45,6 +50,7 @@ it('emits parseable JSON without status text in stdout', async () => {
   });
   expect(output.stderr).not.toHaveBeenCalled();
 });
+
 it('gives file-path advice for output directories with and without --force', async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'brocante-cli-directory-'));
   directories.push(cwd);
@@ -72,6 +78,7 @@ it('gives file-path advice for output directories with and without --force', asy
   expect(await readFile(join(directory, 'keep.txt'), 'utf8')).toBe('preserve me');
   expect((await stat(directory)).mode).toBe(originalMode);
 });
+
 it('validates arguments before looking up credentials', async () => {
   const output = io();
   for (const args of [
@@ -82,6 +89,7 @@ it('validates arguments before looking up credentials', async () => {
     expect(await runCli(args, output)).toBe(1);
   expect(output.ghToken).not.toHaveBeenCalled();
 });
+
 it.each([['--unknown'], ['--format'], ['x/y', '--output'], ['--max-pages'], ['-x']])(
   'reports parser mistakes as usage errors before accessing GitHub: %s',
   async (...args) => {
@@ -93,6 +101,7 @@ it.each([['--unknown'], ['--format'], ['x/y', '--output'], ['--max-pages'], ['-x
     expect(output.fetcher).not.toHaveBeenCalled();
   },
 );
+
 it('still identifies actual network failures', async () => {
   const output = {
     ...io(),
@@ -200,6 +209,7 @@ it('does not label errors outside the request as network failures', async () => 
   expect(await runCli(['--demo', '--format', 'json'], output)).toBe(1);
   expect(output.stderr).toHaveBeenCalledWith('Output failed.\n');
 });
+
 it('uses environment authentication and preserves the rate-limit delay', async () => {
   const output = {
     ...io(),

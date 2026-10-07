@@ -25,6 +25,7 @@ export function createApiClient(fetcher = fetch) {
   const listeners = new Set<() => void>();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const getRetryAt = () => (blocked && Date.now() < blocked.retryAt ? blocked.retryAt : 0);
+
   function publish() {
     clearTimeout(timer);
     timer = undefined;
@@ -33,6 +34,7 @@ export function createApiClient(fetcher = fetch) {
       timer = setTimeout(publish, Math.min(remaining, 2_147_483_647));
     for (const listener of listeners) listener();
   }
+
   function backoff(message: string, status: number, minimumDelay = 0) {
     failures++;
     const retryAt =
@@ -41,6 +43,7 @@ export function createApiClient(fetcher = fetch) {
     publish();
     return blocked;
   }
+
   return {
     getRetryAt,
     subscribe(listener: () => void) {

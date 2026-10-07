@@ -6,6 +6,7 @@ export interface SceneShop {
   status: string;
   size?: 'compact' | 'standard';
 }
+
 export class MarketWorld {
   constructor(
     container: HTMLElement,

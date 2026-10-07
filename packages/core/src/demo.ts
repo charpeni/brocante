@@ -1,4 +1,5 @@
 import type { MarketData, PullRequest } from './market';
+
 const titles = [
   'Make the command menu keyboard-friendly',
   'Stop retries from charging twice',
@@ -25,6 +26,7 @@ const titles = [
   'Turn error codes into useful messages',
   'Remember your place in a long list',
 ];
+
 export function demoMarket(): MarketData {
   const now = Date.now();
   return {

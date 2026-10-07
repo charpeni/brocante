@@ -4,6 +4,7 @@ import { GitHubError, type loadMarket } from './github';
 import { demoMarket } from './demo';
 
 afterEach(() => vi.useRealTimers());
+
 it.each(['INTERNAL', undefined] as const)(
   'rejects non-public or missing visibility even with isPrivate false: %s',
   async (visibility) => {

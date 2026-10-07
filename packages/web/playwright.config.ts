@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Software WebGL needs time to compile shaders and competes for CPU across browsers.

@@ -11,7 +11,7 @@ spot aging PRs, and find your next review.
 
 ## Quick start
 
-Use Node.js 24 (minimum 22.12) and the pnpm version pinned in `package.json`.
+Use the Node.js version in [`.nvmrc`](.nvmrc) and the pnpm version pinned in `package.json`.
 
 ```sh
 pnpm install

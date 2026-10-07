@@ -11,6 +11,7 @@ import {
   toSceneShop,
   type PullRequest,
 } from '../lib/market';
+
 const discoveries = [
   {
     id: 'gift',
@@ -31,7 +32,9 @@ const discoveries = [
     height: 0.8,
   },
 ] as const;
+
 type DiscoveryId = (typeof discoveries)[number]['id'];
+
 interface Props {
   pullRequests: PullRequest[];
   visibleIds: Set<number>;
@@ -42,6 +45,7 @@ interface Props {
   season: Season;
   onSeasonChange: (value: Season) => void;
 }
+
 export default function MarketCanvas(props: Props) {
   const container = useRef<HTMLDivElement>(null);
   const world = useRef<MarketWorld | null>(null);

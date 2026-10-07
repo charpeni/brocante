@@ -10,9 +10,11 @@ export class MarketEntrance {
     for (const stall of stalls.values()) this.add(stall.group, (index++ % 6) * 40);
     this.duration = Math.max(580, ...this.items.map((item) => item.delay + 500));
   }
+
   add(object, delay) {
     this.items.push({ object, delay, scale: object.scale.clone() });
   }
+
   update(elapsed, ease) {
     for (const { object, delay, scale } of this.items) {
       const progress = Math.min(1, Math.max(0, (elapsed - delay) / 500));
@@ -21,6 +23,7 @@ export class MarketEntrance {
       object.scale.y *= 0.08 + 0.92 * ease(progress);
     }
   }
+
   finish() {
     for (const { object, scale } of this.items) object.scale.copy(scale);
   }

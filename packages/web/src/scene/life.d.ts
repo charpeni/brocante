@@ -1,4 +1,5 @@
 import type { MarketWorld } from './scene';
+
 export class MarketLife {
   moments: { hintTargets: Record<'gift' | 'sword' | 'worm', import('three').Group> };
   constructor(world: MarketWorld, onChange?: (snapshot: unknown) => void);

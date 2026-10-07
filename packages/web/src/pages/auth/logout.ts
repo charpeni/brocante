@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { appEnv } from '../../lib/env';
 import { appOrigin, sessionCookie, loginCookie, redirect, json } from '../../lib/auth';
+
 export const POST: APIRoute = ({ request }) => {
   const env = appEnv();
   if (request.headers.get('origin') !== appOrigin(env))

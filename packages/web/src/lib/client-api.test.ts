@@ -1,7 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { CooldownError, createApiClient } from './client-api';
 import { retryAfterMs } from './retry';
+
 afterEach(() => vi.useRealTimers());
+
 it('blocks every request path until Retry-After, then allows recovery', async () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-10-04T12:00:00Z'));
@@ -25,6 +27,7 @@ it('blocks every request path until Retry-After, then allows recovery', async ()
   await expect(api.request('/api/market?repo=a/b', signal)).resolves.toEqual({ ok: true });
   expect(api.getRetryAt()).toBe(0);
 });
+
 it('backs off repeated outages and resets after a successful response', async () => {
   vi.useFakeTimers();
   const fetcher = vi
@@ -41,6 +44,7 @@ it('backs off repeated outages and resets after a successful response', async ()
   await api.request('/api/session', signal);
   expect(api.getRetryAt()).toBe(0);
 });
+
 it('supports HTTP-date retry headers and ignores malformed values', () => {
   const now = Date.parse('2026-10-04T12:00:00Z');
   expect(retryAfterMs('Sun, 04 Oct 2026 12:02:00 GMT', now)).toBe(120_000);
@@ -67,6 +71,7 @@ it('keeps a newer rate limit when a concurrent request succeeds', async () => {
   await expect(api.request('/api/market?repo=c/d', signal)).rejects.toMatchObject({ status: 429 });
   expect(fetcher).toHaveBeenCalledTimes(2);
 });
+
 it('honors retry headers on non-JSON proxy errors', async () => {
   vi.useFakeTimers();
   const fetcher = vi
@@ -102,6 +107,7 @@ it('notifies every subscriber when a shared cooldown begins and expires', async 
   unsubscribe();
   expect(vi.getTimerCount()).toBe(0);
 });
+
 it('does not fire an overflowing timer early for a long Retry-After', async () => {
   vi.useFakeTimers();
   const api = createApiClient(
@@ -145,6 +151,7 @@ it('uses neutral wording for locally paused requests and preserves the shared de
   });
   expect(fetcher).toHaveBeenCalledTimes(1);
 });
+
 it('keeps a concurrent response’s own error text without shortening an existing cooldown', async () => {
   vi.useFakeTimers();
   const first = Promise.withResolvers<Response>(),

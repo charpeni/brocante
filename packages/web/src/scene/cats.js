@@ -26,6 +26,7 @@ export class MarketCats {
     this.animals = [this.create('ginger', 0), this.create('charcoal', 1)];
     this.update(0);
   }
+
   create(coat, index) {
     const r = this.resources;
     const object = new THREE.Group();
@@ -75,6 +76,7 @@ export class MarketCats {
     this.scene.add(object);
     return { object, body, chest, head, eyes, legs, tail, index, phase: 'resting' };
   }
+
   update(time) {
     for (const cat of this.animals) {
       const t = time + cat.index * 17;
@@ -119,6 +121,7 @@ export class MarketCats {
       cat.tail.rotation.z = Math.sin(time * 1.3 + cat.index) * 0.14 * (1 - nap);
     }
   }
+
   dispose() {
     for (const cat of this.animals) this.scene.remove(cat.object);
     this.animals = [];

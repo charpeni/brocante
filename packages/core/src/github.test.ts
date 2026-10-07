@@ -28,9 +28,11 @@ function repository() {
     },
   };
 }
+
 function response(body: unknown, init?: ResponseInit) {
   return vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(body), init));
 }
+
 afterEach(() => vi.useRealTimers());
 
 it.each([
@@ -64,6 +66,7 @@ it.each(['<html>private detail</html>', 'null', '"private detail"'])(
     });
   },
 );
+
 it('loads repository-wide historical counts independently of PR searches', async () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-10-05T12:00:00Z'));
@@ -96,6 +99,7 @@ it('loads repository-wide historical counts independently of PR searches', async
     expect(fetcher).toHaveBeenCalledTimes(1);
   }
 });
+
 it('keeps PRs available when an optional historical search fails', async () => {
   const result = await loadMarket(
     'token',
@@ -150,6 +154,7 @@ function searchResult() {
     },
   };
 }
+
 it('uses GitHub advanced search and preserves PR review data, totals and pagination', async () => {
   const fetcher = response(searchResult());
   const result = await loadMarket(
@@ -174,6 +179,7 @@ it('uses GitHub advanced search and preserves PR review data, totals and paginat
   expect(result.pullRequests[0].requestedCount).toBe(14);
   expect(result.pullRequests[0].body).toContain('**formatted**');
 });
+
 it('does not expose results outside the current repository even if upstream search escapes scope', async () => {
   const result = searchResult();
   result.data.search.nodes[0].repository.nameWithOwner = 'other/repo';
@@ -181,6 +187,7 @@ it('does not expose results outside the current repository even if upstream sear
     loadMarket('token', 'team', 'private', null, response(result), 'bug'),
   ).rejects.toMatchObject({ status: 400 });
 });
+
 it('tolerates only optional reviewer-identity errors at the search path', async () => {
   const data = searchResult();
   const errors = [
@@ -209,6 +216,7 @@ it('tolerates only optional reviewer-identity errors at the search path', async 
     ),
   ).rejects.toMatchObject({ status: 502 });
 });
+
 it('reports invalid queries separately from access failures', async () => {
   await expect(
     loadMarket(
@@ -264,6 +272,7 @@ it('preserves full outstanding-request count and readable PRs without optional r
   );
   expect(marketQuery).not.toContain('... on Team');
 });
+
 it.each([
   { type: 'FORBIDDEN', path: ['repository', 'pullRequests', 'nodes', 0, 'reviewRequests'] },
   { type: 'FORBIDDEN', path: ['repository', 'pullRequests', 'nodes', 0, 'title'] },
@@ -284,11 +293,13 @@ it.each([
     ),
   ).rejects.toMatchObject({ status: 502 });
 });
+
 it.each(['FORBIDDEN', 'NOT_FOUND'])('recognizes %s at the repository boundary', async (type) => {
   await expect(
     loadMarket('token', 'o', 'r', null, response({ errors: [{ type, path: ['repository'] }] })),
   ).rejects.toMatchObject({ status: 403 });
 });
+
 it('returns retry timing for HTTP-200 GraphQL exhaustion', async () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-10-04T12:00:00Z'));
@@ -306,6 +317,7 @@ it('returns retry timing for HTTP-200 GraphQL exhaustion', async () => {
     retryAfter: 180,
   });
 });
+
 it.each([
   {
     body: {},
@@ -322,6 +334,7 @@ it.each([
     github('token', '/user', {}, response(body, { status: 403, headers })),
   ).rejects.toMatchObject({ status: 429, retryAfter: delay });
 });
+
 it.each([401, 403, 404, 429, 500])('sanitizes GitHub HTTP %s errors', async (status) => {
   const fetcher = response({ message: 'private upstream details' }, { status });
   await expect(github('token', '/user', {}, fetcher)).rejects.not.toThrow(

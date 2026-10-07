@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { appEnv } from '../../lib/env';
 import { configured, session, json, sessionCookie } from '../../lib/auth';
 import { github, GitHubError } from '../../lib/github';
+
 export const GET: APIRoute = async ({ request }) => {
   const env = appEnv();
   const info = {

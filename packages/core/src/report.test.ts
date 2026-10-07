@@ -34,6 +34,7 @@ function page(numbers: number[], next: string | null) {
     }),
   );
 }
+
 describe('local reports', () => {
   it('walks cursors and deduplicates PRs moving between pages', async () => {
     const fetcher = vi

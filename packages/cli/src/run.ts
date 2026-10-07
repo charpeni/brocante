@@ -48,6 +48,7 @@ interface CliIO {
   fetcher?: typeof fetch;
   ghToken: () => Promise<string>;
 }
+
 async function ghToken() {
   try {
     const { stdout } = await promisify(execFile)(
@@ -60,6 +61,7 @@ async function ghToken() {
     return '';
   }
 }
+
 const directoryAdvice =
   'The output path is a directory. Choose a file path such as --output report.html, or use --output - to print.';
 
@@ -68,6 +70,7 @@ async function checkOutput(path: string, force: boolean) {
     if (error.code === 'ENOENT') return null;
     throw error;
   });
+
   if (entry) {
     if ((entry.isSymbolicLink() ? await stat(path).catch(() => null) : entry)?.isDirectory())
       throw new Error(directoryAdvice);
@@ -91,6 +94,7 @@ export async function runCli(argv: string[], overrides: Partial<CliIO> = {}): Pr
     ghToken,
     ...overrides,
   };
+
   try {
     const { values, positionals } = parseArgs({
       args: argv,
@@ -107,32 +111,40 @@ export async function runCli(argv: string[], overrides: Partial<CliIO> = {}): Pr
         version: { type: 'boolean', short: 'v' },
       },
     });
+
     if (values.help) {
       io.stdout(help);
       return 0;
     }
+
     if (values.version) {
       io.stdout(`${version}\n`);
       return 0;
     }
+
     if (positionals[0] === 'report') positionals.shift();
     if (positionals.length > 1 || (values.demo && positionals.length > 0))
       throw new Error('Choose one repository, or --demo without a repository.');
+
     const demo = values.demo ? demoMarket() : null;
     const repository = demo?.repository ?? positionals[0];
     const parsed = repository && parseRepository(repository);
     if (!parsed) throw new Error('Use brocante owner/repo, or brocante --demo.');
+
     if (!['html', 'markdown', 'json'].includes(values.format!))
       throw new Error('Choose --format html, markdown, or json.');
+
     const maxPages = Number(values['max-pages']);
     if (!/^\d+$/.test(values['max-pages']!) || maxPages < 1 || maxPages > 100)
       throw new Error('--max-pages must be an integer from 1 to 100.');
     if (values.demo && values.search) throw new Error('--search requires a live repository.');
+
     const format = values.format as ReportFormat;
     const output =
       values.output ?? (format === 'html' ? `brocante-${parsed.owner}-${parsed.repo}.html` : '-');
     const path = output === '-' ? null : resolve(io.cwd, output);
     if (path) await checkOutput(path, values.force ?? false);
+
     const token = values.demo
       ? ''
       : io.env.GH_TOKEN?.trim() || io.env.GITHUB_TOKEN?.trim() || (await io.ghToken());
@@ -145,6 +157,7 @@ export async function runCli(argv: string[], overrides: Partial<CliIO> = {}): Pr
       throw new Error(
         'The GitHub token contains whitespace or control characters. Check GH_TOKEN / GITHUB_TOKEN or sign in again with gh auth login.',
       );
+
     const report = demo
       ? { ...reportFromSnapshot(demo), demo: true as const }
       : await generateReport({
@@ -154,6 +167,7 @@ export async function runCli(argv: string[], overrides: Partial<CliIO> = {}): Pr
           maxPages,
           fetcher: io.fetcher,
         });
+
     const content = renderReport(report, format);
     if (!path) io.stdout(content);
     else {
@@ -174,33 +188,40 @@ export async function runCli(argv: string[], overrides: Partial<CliIO> = {}): Pr
       }
       io.stderr(`Wrote ${path}\n`);
     }
+
     if (!report.complete)
       io.stderr('Partial report: increase --max-pages or narrow --search for more results.\n');
+
     return 0;
   } catch (error) {
     const code = error instanceof Error && 'code' in error ? String(error.code) : '';
+
     if (code.startsWith('ERR_PARSE_ARGS')) {
       io.stderr(`${(error as Error).message}\nRun brocante --help for usage.\n`);
       return 2;
     }
+
     if (code === 'EEXIST') {
       io.stderr(
         'The output file already exists. Use --force to replace it, choose another --output path, or use --output - to print.\n',
       );
       return 1;
     }
+
     if (['ENOENT', 'ENOTDIR'].includes(code)) {
       io.stderr(
         'The output directory does not exist. Create it or choose another --output path.\n',
       );
       return 1;
     }
+
     if (['EACCES', 'EPERM', 'EROFS'].includes(code)) {
       io.stderr(
         'The output path is not writable. Check its permissions or choose another --output path.\n',
       );
       return 1;
     }
+
     if (error instanceof GitHubError) {
       const message =
         error.status === 401
@@ -211,6 +232,7 @@ export async function runCli(argv: string[], overrides: Partial<CliIO> = {}): Pr
       );
       return error.status === 429 ? 3 : 1;
     }
+
     io.stderr(`${error instanceof Error ? error.message : 'Report generation failed.'}\n`);
     return 1;
   }

@@ -3,6 +3,7 @@ import type { BbPluginApi, PluginCliRegistration } from '@get-bb/plugin-sdk';
 import plugin from './server';
 
 afterEach(() => vi.unstubAllGlobals());
+
 function registration(token?: string) {
   let cli: PluginCliRegistration | undefined;
   // This adapter-only fixture exercises the real SDK command parser. The plugin
@@ -17,6 +18,7 @@ function registration(token?: string) {
   } as unknown as BbPluginApi);
   return cli!;
 }
+
 it('offers help without a configured token and rejects missing credentials', async () => {
   const cli = registration();
   const context = { signal: new AbortController().signal };
@@ -25,6 +27,7 @@ it('offers help without a configured token and rejects missing credentials', asy
   expect(result.exitCode).not.toBe(0);
   expect(result.stderr).toContain('Configure a GitHub token');
 });
+
 it('enforces shared rate-limit cooldown without exposing the credential', async () => {
   const fetcher = vi
     .fn<typeof fetch>()
@@ -39,6 +42,7 @@ it('enforces shared rate-limit cooldown without exposing the credential', async 
   expect(fetcher).toHaveBeenCalledTimes(1);
   expect(JSON.stringify([first, second])).not.toContain('private-test-secret');
 });
+
 it.each(['json', 'markdown'])(
   'returns a bounded %s report with usable partial-report guidance',
   async (format) => {

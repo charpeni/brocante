@@ -11,6 +11,7 @@ import {
 } from '../../lib/auth';
 import { github } from '../../lib/github';
 import { returnMarketPath } from '../../lib/auth-location';
+
 export const GET: APIRoute = async ({ request, url }) => {
   const env = appEnv();
   let validated = false;

@@ -7,6 +7,7 @@ import { GET as market } from '../pages/api/market';
 import { GET as session } from '../pages/api/session';
 import { GitHubError, loadMarket, github } from './github';
 import { demoMarket } from './demo';
+
 const env = {
   APP_URL: 'https://market.example',
   SESSION_KEY: btoa('0123456789abcdef0123456789abcdef'),
@@ -14,17 +15,21 @@ const env = {
   GITHUB_CLIENT_SECRET: 'test',
   GITHUB_PUBLIC_TOKEN: undefined as string | undefined,
 };
+
 vi.mock('./env', () => ({ appEnv: () => env }));
+
 vi.mock('./github', async (original) => ({
   ...(await original<typeof import('./github')>()),
   loadMarket: vi.fn(),
   github: vi.fn(),
 }));
+
 afterEach(() => {
   env.GITHUB_PUBLIC_TOKEN = undefined;
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
+
 it('advertises public access without returning the server credential', async () => {
   env.GITHUB_PUBLIC_TOKEN = 'public-session-secret';
   const response = await session(context('/api/session', ''));
@@ -36,12 +41,14 @@ it('advertises public access without returning the server credential', async () 
   });
   expect(github).not.toHaveBeenCalled();
 });
+
 it('requires sign-in when no public token is configured', async () => {
   const response = await market(context('/api/market?repo=a/b', ''));
   expect(response.status).toBe(401);
   expect(response.headers.get('cache-control')).toBe('no-store');
   expect(loadMarket).not.toHaveBeenCalled();
 });
+
 it('loads public repositories without signing in and prefers a signed-in user token', async () => {
   env.GITHUB_PUBLIC_TOKEN = 'public-route-secret';
   vi.mocked(loadMarket).mockResolvedValue(demoMarket());
@@ -61,6 +68,7 @@ it('loads public repositories without signing in and prefers a signed-in user to
   await market(context('/api/market?repo=a/b', `market_session=${token}`));
   expect(loadMarket).toHaveBeenLastCalledWith('user-secret', 'a', 'b', null, undefined, '');
 });
+
 it('never exposes a private response to an anonymous visitor', async () => {
   env.GITHUB_PUBLIC_TOKEN = 'private-capable-test-token';
   vi.mocked(loadMarket).mockResolvedValue({
@@ -72,6 +80,7 @@ it('never exposes a private response to an anonymous visitor', async () => {
   expect(response.status).toBe(403);
   expect(await response.text()).not.toContain('private/sentinel');
 });
+
 it('forwards public rate limits and stops subsequent anonymous upstream requests', async () => {
   env.GITHUB_PUBLIC_TOKEN = 'rate-limited-public-token';
   vi.mocked(loadMarket).mockRejectedValue(new GitHubError('Limit', 429, 180));
@@ -83,16 +92,19 @@ it('forwards public rate limits and stops subsequent anonymous upstream requests
   }
   expect(loadMarket).toHaveBeenCalledTimes(1);
 });
+
 function context(path: string, cookies: string) {
   const url = new URL(path, env.APP_URL);
   return { url, request: new Request(url, { headers: { cookie: cookies } }) } as APIContext;
 }
+
 it('starts login on the configured origin before creating a transaction cookie', async () => {
   const response = await login(context('http://192.168.4.244:4321/auth/login', ''));
   expect(response.status).toBe(302);
   expect(response.headers.get('location')).toBe('https://market.example/auth/login');
   expect(response.headers.get('set-cookie')).toBeNull();
 });
+
 it.each(['/', '/team/repo?q=label%3Abug', '/r/auth/login?q=author%3Amina'])(
   'completes GitHub App login with state, PKCE, and returns to %s',
   async (returnTo) => {
@@ -157,18 +169,21 @@ it.each(['/', '/team/repo?q=label%3Abug', '/r/auth/login?q=author%3Amina'])(
     expect(payload).not.toHaveProperty('refresh_token');
   },
 );
+
 it('preserves a safe return location when switching to the canonical origin', async () => {
   const params = new URLSearchParams({ returnTo: '/team/repo?q=label%3Abug' });
   const response = await login(context(`http://192.168.4.244:4321/auth/login?${params}`, ''));
   expect(response.headers.get('location')).toBe(`https://market.example/auth/login?${params}`);
   expect(response.headers.get('set-cookie')).toBeNull();
 });
+
 it('does not store an external redirect destination in the login transaction', async () => {
   const start = await login(context('/auth/login?returnTo=https%3A%2F%2Fevil.example', ''));
   const cookie = start.headers.get('set-cookie')!.split(';')[0];
   const transaction = await unseal(env, 'login', cookie.slice('market_login='.length));
   expect(transaction.returnTo).toBe('/');
 });
+
 it.each(['?error=access_denied', '?code=code&state=wrong', ''])(
   'preserves existing cookies on unvalidated callback %s',
   async (query) => {
@@ -186,6 +201,7 @@ it.each(['?error=access_denied', '?code=code&state=wrong', ''])(
     expect(response.headers.get('set-cookie')).toBeNull();
   },
 );
+
 it.each(['error=access_denied', 'code=bad-code'])(
   'clears only a validated login transaction on failed OAuth %s',
   async (query) => {
@@ -207,6 +223,7 @@ it.each(['error=access_denied', 'code=bad-code'])(
     expect(response.headers.get('set-cookie')).not.toContain('market_session');
   },
 );
+
 it('forwards sanitized retry timing through the market and session routes', async () => {
   const token = await seal(env, 'session', { accessToken: 'secret', login: 'mina' }, 60);
   const error = new GitHubError('Wait before refreshing.', 429, 180);

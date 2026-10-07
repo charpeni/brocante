@@ -14,6 +14,7 @@ function birdResources() {
     eyeMaterial: new THREE.MeshBasicMaterial({ color: 0x222b23 }),
   };
 }
+
 function bird({
   birdBody,
   birdWing,
@@ -85,6 +86,7 @@ export class MarketLife {
     this.observer.observe(world.renderer.domElement);
     this.sync();
   }
+
   dispose() {
     this.enabled = false;
     if (this.frame !== null) cancelAnimationFrame(this.frame);
@@ -98,6 +100,7 @@ export class MarketLife {
     this.moments.dispose();
     Object.values(this.resources).forEach((resource) => resource.dispose());
   }
+
   canMove() {
     return (
       this.enabled &&
@@ -107,10 +110,12 @@ export class MarketLife {
       !document.hidden
     );
   }
+
   setEnabled(value) {
     this.enabled = value;
     this.sync();
   }
+
   sync() {
     if (this.frame !== null) cancelAnimationFrame(this.frame);
     this.frame = null;
@@ -119,6 +124,7 @@ export class MarketLife {
     else this.world.finishEntrance();
     this.onChange(this.snapshot());
   }
+
   snapshot() {
     return {
       enabled: this.enabled,
@@ -137,6 +143,7 @@ export class MarketLife {
       })),
     };
   }
+
   tick(now) {
     this.frame = null;
     if (!this.canMove()) return;
@@ -150,6 +157,7 @@ export class MarketLife {
     }
     this.frame = requestAnimationFrame(this.tick);
   }
+
   targets(kind) {
     if (kind === 'shop')
       return [...this.world.stalls.values()].map((s) => ({
@@ -185,6 +193,7 @@ export class MarketLife {
         },
       }));
   }
+
   invite(manual = false) {
     if (this.birds.length >= 2) return false;
     const kind = this.visits % 2 === 0 ? 'shop' : 'tree',
@@ -214,12 +223,14 @@ export class MarketLife {
     if (manual) this.world.render(true);
     return true;
   }
+
   fold(b, folded) {
     b.object.userData.wings.forEach((w, i) => {
       w.rotation.z = folded ? (i === 0 ? -1.15 : 1.15) : 0;
       w.scale.x = folded ? 0.58 : 1;
     });
   }
+
   depart(b) {
     b.phase = 'departing';
     b.since = this.time;
@@ -228,6 +239,7 @@ export class MarketLife {
     b.duration = 5.5;
     this.fold(b, false);
   }
+
   update() {
     const t = this.time;
     this.cats.update(t);

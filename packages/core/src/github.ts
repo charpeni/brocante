@@ -1,6 +1,7 @@
 import { retryAfterMs } from './retry';
 import type { MarketData, PullRequest, ReviewDecision } from './market';
 import { githubSearchQuery } from './market-search';
+
 export class GitHubError extends Error {
   constructor(
     message: string,
@@ -10,6 +11,7 @@ export class GitHubError extends Error {
     super(message);
   }
 }
+
 function rateLimited(response: Response) {
   const reset = Number(response.headers.get('x-ratelimit-reset')) * 1000 - Date.now();
   const delay = Math.max(
@@ -23,8 +25,10 @@ function rateLimited(response: Response) {
     Math.ceil(delay / 1000),
   );
 }
+
 export async function github(token: string, path: string, init: RequestInit = {}, fetcher = fetch) {
   let response: Response;
+
   try {
     response = await fetcher(`https://api.github.com${path}`, {
       ...init,
@@ -45,6 +49,7 @@ export async function github(token: string, path: string, init: RequestInit = {}
       throw new GitHubError('Unable to reach GitHub. Check your network and try again.', 503);
     throw error;
   }
+
   if (!response.ok) {
     if (response.status === 401)
       throw new GitHubError('Your GitHub session expired. Please sign in again.', 401);
@@ -69,6 +74,7 @@ export async function github(token: string, path: string, init: RequestInit = {}
   }
   return response;
 }
+
 const pullRequestFields = `
   number title url body createdAt updatedAt isDraft state reviewDecision
   additions deletions changedFiles
@@ -76,20 +82,24 @@ const pullRequestFields = `
   labels(first: 10) { nodes { name } }
   reviewRequests(first: 10) { totalCount nodes { requestedReviewer { ... on User { login } __typename ... on Mannequin { login } } } }
 `;
+
 const activityVariables =
   '$opened: String!, $merged: String!, $previousOpened: String!, $previousMerged: String!';
+
 const activityFields = `
   activityOpened: search(query: $opened, type: ISSUE_ADVANCED, first: 1) { issueCount }
   activityMerged: search(query: $merged, type: ISSUE_ADVANCED, first: 1) { issueCount }
   activityPreviousOpened: search(query: $previousOpened, type: ISSUE_ADVANCED, first: 1) { issueCount }
   activityPreviousMerged: search(query: $previousMerged, type: ISSUE_ADVANCED, first: 1) { issueCount }
 `;
+
 const activityRoots = [
   'activityOpened',
   'activityMerged',
   'activityPreviousOpened',
   'activityPreviousMerged',
 ];
+
 export const marketQuery = `query Market($owner: String!, $repo: String!, $cursor: String, ${activityVariables}) {
   repository(owner: $owner, name: $repo) {
     nameWithOwner url isPrivate visibility
@@ -102,6 +112,7 @@ export const marketQuery = `query Market($owner: String!, $repo: String!, $curso
   }
   ${activityFields}
 }`;
+
 export const marketSearchQuery = `query MarketSearch($owner: String!, $repo: String!, $cursor: String, $search: String!, ${activityVariables}) {
   repository(owner: $owner, name: $repo) { nameWithOwner url isPrivate visibility }
   search(query: $search, type: ISSUE_ADVANCED, first: 60, after: $cursor) {
@@ -113,6 +124,7 @@ export const marketSearchQuery = `query MarketSearch($owner: String!, $repo: Str
   }
   ${activityFields}
 }`;
+
 interface Node {
   __typename?: string;
   repository?: { nameWithOwner: string };
@@ -135,10 +147,12 @@ interface Node {
     nodes: { requestedReviewer: { login?: string; __typename?: string } | null }[];
   };
 }
+
 interface Connection {
   pageInfo: { hasNextPage: boolean; endCursor: string | null };
   nodes: (Node | null)[];
 }
+
 interface GraphResponse {
   errors?: { type?: string; message?: string; path?: (string | number)[] }[];
   data?: {
@@ -156,6 +170,7 @@ interface GraphResponse {
     search?: Connection & { issueCount: number };
   };
 }
+
 export async function loadMarket(
   token: string,
   owner: string,
@@ -202,8 +217,10 @@ export async function loadMarket(
   });
   if (!result || typeof result !== 'object' || Array.isArray(result))
     throw new GitHubError('GitHub returned an unreadable response. Please try again.', 502);
+
   if (result.errors?.some((error) => error.type === 'RATE_LIMITED')) throw rateLimited(response);
   const connection = query ? result.data?.search : result.data?.repository?.pullRequests;
+
   // Reviewer identities are optional. Permission errors at this exact leaf must
   // not hide otherwise readable PRs; the full outstanding count is still authoritative.
   const errors = result.errors?.filter((error) => {
@@ -231,6 +248,7 @@ export async function loadMarket(
       !!connection?.nodes?.[Number(path[1])]?.reviewRequests?.nodes?.[Number(path[4])]
     );
   });
+
   if (errors?.length) {
     if (
       query &&
@@ -259,11 +277,13 @@ export async function loadMarket(
       accessFailure ? undefined : 60,
     );
   }
+
   if (!result.data?.repository)
     throw new GitHubError(
       'Unable to read this repository. Check its name and your GitHub credentials and permissions.',
       403,
     );
+
   const source = result.data.repository;
   if (!connection)
     throw new GitHubError(
@@ -271,6 +291,7 @@ export async function loadMarket(
       502,
       60,
     );
+
   if (
     query &&
     connection.nodes.some(
@@ -284,6 +305,7 @@ export async function loadMarket(
       'Search only open pull requests in this repository. Remove conflicting repository or state qualifiers.',
       400,
     );
+
   return {
     repository: source.nameWithOwner,
     url: source.url,

@@ -9,7 +9,9 @@ import {
   type PullRequest,
 } from './market';
 import { demoMarket } from './demo';
+
 const base = demoMarket().pullRequests[0];
+
 const pr = (patch: Partial<PullRequest>): PullRequest => ({
   ...base,
   isDraft: false,
@@ -17,6 +19,7 @@ const pr = (patch: Partial<PullRequest>): PullRequest => ({
   reviewDecision: null,
   ...patch,
 });
+
 describe('GitHub-derived shop state', () => {
   it.each(['CLOSED', 'MERGED'] as const)(
     'removes %s PRs even when they still have review requests',
@@ -45,6 +48,7 @@ describe('GitHub-derived shop state', () => {
     expect(shopState(pr({}))).toBe('awaiting');
   });
 });
+
 describe('repository input', () => {
   it.each(['owner/project', 'https://github.com/owner/project/'])('accepts %s', (input) => {
     expect(parseRepository(input)).toEqual({ owner: 'owner', repo: 'project' });

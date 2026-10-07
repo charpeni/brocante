@@ -10,6 +10,7 @@ import {
   loginCookie,
   redirect,
 } from '../../lib/auth';
+
 export const GET: APIRoute = async ({ url: requestUrl }) => {
   const env = appEnv();
   if (!configured(env)) return redirect('/?auth_error=configuration');

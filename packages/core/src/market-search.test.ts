@@ -5,6 +5,7 @@ import { marketLocation, marketPath } from './market-location';
 it('rejects backslash ambiguities before sending GitHub search', () => {
   expect(() => githubSearchQuery('o/r', String.raw`\" ( \" ) OR repo:x/y`)).toThrow(/backslashes/);
 });
+
 it.each(['api/market', 'auth/login', 'brand/logo', 'r/repo'])(
   'uses an unambiguous route for %s',
   (repo) => {
@@ -22,6 +23,7 @@ it('groups GitHub search expressions within the active open-PR repository', () =
     '(label:"help wanted" (review:required OR draft:true))',
   );
 });
+
 it.each([
   ') OR repo:other/repo (',
   'label:"unclosed',
@@ -31,6 +33,7 @@ it.each([
 ])('rejects searches that could break grouping or exceed limits: %s', (query) =>
   expect(() => githubSearchQuery('a/b', query)).toThrow(),
 );
+
 it('builds and parses pretty URLs with shareable search terms', () => {
   const path = marketPath('withastro/astro', 'label:"help wanted"');
   expect(path).toBe('/withastro/astro?q=label%3A%22help+wanted%22');

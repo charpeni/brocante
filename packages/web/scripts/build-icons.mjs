@@ -12,15 +12,21 @@ const body = mark
   .replaceAll('var(--canvas,#F6F1E6)', '#F6F1E6')
   .replaceAll('var(--accent,#B64E36)', '#B64E36');
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" role="img" aria-label="Brocante"><rect width="80" height="80" rx="16" fill="#F6F1E6"/>${body}</svg>\n`;
+
 await writeFile(new URL('favicon.svg', root), svg);
+
 const sizes = [16, 32];
 const images = await Promise.all(
   sizes.map((size) => sharp(Buffer.from(svg)).resize(size, size).png().toBuffer()),
 );
 const directory = Buffer.alloc(6 + images.length * 16);
+
 directory.writeUInt16LE(1, 2);
+
 directory.writeUInt16LE(images.length, 4);
+
 let offset = directory.length;
+
 images.forEach((image, i) => {
   const entry = 6 + i * 16;
   directory[entry] = sizes[i];
@@ -31,7 +37,9 @@ images.forEach((image, i) => {
   directory.writeUInt32LE(offset, entry + 12);
   offset += image.length;
 });
+
 await writeFile(new URL('favicon.ico', root), Buffer.concat([directory, ...images]));
+
 await sharp(Buffer.from(svg))
   .resize(180, 180)
   .png()

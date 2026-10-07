@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { demoMarket } from '../../src/lib/demo';
+
 test('demo renders, filters, selects, and offers a complete list', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -25,6 +26,7 @@ test('demo renders, filters, selects, and offers a complete list', async ({ page
     true,
   );
 });
+
 test('logout rejects cross-origin requests', async ({ request }) => {
   const logout = await request.post('/auth/logout', {
     headers: { Origin: 'https://other.example' },
@@ -32,6 +34,7 @@ test('logout rejects cross-origin requests', async ({ request }) => {
   });
   expect(logout.status()).toBe(403);
 });
+
 test('live UI paginates and hides snapshots after access is revoked', async ({ page }) => {
   await page.route('**/api/session', (route) =>
     route.fulfill({ json: { login: 'mina', configured: true, installUrl: null } }),
@@ -60,6 +63,7 @@ test('live UI paginates and hides snapshots after access is revoked', async ({ p
   await expect(page.locator('.shop-row')).toHaveCount(0);
   await expect(page.locator('.world canvas')).toHaveCount(0);
 });
+
 test('reduced motion and a unavailable WebGL context preserve the list', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript(() => {

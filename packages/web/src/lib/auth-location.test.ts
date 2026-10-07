@@ -11,6 +11,7 @@ it('preserves repository/search routes, including reserved owners', () => {
     '/auth/login?returnTo=%2Fteam%2Frepo%3Fq%3Dlabel%253Abug',
   );
 });
+
 it.each([
   undefined,
   null,

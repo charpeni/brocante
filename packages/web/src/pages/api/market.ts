@@ -4,6 +4,7 @@ import { session, json, sessionCookie } from '../../lib/auth';
 import { parseRepository } from '../../lib/market';
 import { GitHubError, loadMarket } from '../../lib/github';
 import { loadPublicMarket } from '../../lib/public-market';
+
 export const GET: APIRoute = async ({ request, url }) => {
   const env = appEnv(),
     user = await session(request, env);
