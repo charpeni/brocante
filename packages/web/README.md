@@ -80,37 +80,27 @@ use their own token.
 
 ## Deploy to Cloudflare
 
-In Cloudflare, add `brocante.dev` as an active domain, then go to **Workers & Pages → Create
-application → Import repository** and connect `charpeni/brocante`.
+Customize `env.production` in `wrangler.jsonc` with your Worker name, HTTPS `APP_URL`, and domain.
+For a `workers.dev` address, remove `routes` and set `workers_dev: true`. Register
+`<APP_URL>/auth/callback` with your production GitHub App.
 
-| Build setting     | Value                                                                        |
-| ----------------- | ---------------------------------------------------------------------------- |
-| Worker name       | `brocante`                                                                   |
-| Production branch | `main`                                                                       |
-| Root directory    | Repository root (`/`)                                                        |
-| Build command     | `pnpm install --frozen-lockfile && CLOUDFLARE_ENV=production pnpm build:web` |
-| Deploy command    | `pnpm --filter @brocante/web exec wrangler deploy --env production`          |
-| Build variables   | `NODE_VERSION=24`, `PNPM_VERSION=12.8.1`                                     |
-
-The production environment sets `APP_URL=https://brocante.dev` and attaches the custom domain.
-Local development keeps its localhost configuration.
-
-Create a production GitHub App using the permissions above and callback
-`https://brocante.dev/auth/callback`. In the Worker's **Settings → Variables & Secrets**, add
-`GITHUB_CLIENT_ID` and `GITHUB_APP_SLUG` as plain-text variables, and `GITHUB_CLIENT_SECRET` and
-`SESSION_KEY` as secrets. Generate a separate production key with `openssl rand -base64 32`.
-Optionally add `GITHUB_PUBLIC_TOKEN` as a secret for public browsing without sign-in. These are
-runtime settings; putting them in build variables does not configure the running app.
-
-Save and deploy the runtime settings, then verify demo loading, sign-in, sign-out, and repository
-access. Deployments preserve dashboard variables. The app requires no database or storage bindings.
-
-For a manual production deployment from the repository root, log in with Wrangler, then run:
+Run from the repository root:
 
 ```sh
+pnpm --filter @brocante/web exec wrangler login
 CLOUDFLARE_ENV=production pnpm build:web
 pnpm --filter @brocante/web exec wrangler deploy --env production
 ```
+
+Set `GITHUB_CLIENT_ID` and `GITHUB_APP_SLUG` as Worker runtime variables, and
+`GITHUB_CLIENT_SECRET` and a separate production `SESSION_KEY` as secrets. Optionally add
+`GITHUB_PUBLIC_TOKEN`. Local `.dev.vars` files are not deployed.
+
+For GitHub deployments, connect your repository through Cloudflare Workers Builds. Use the
+repository root, Node.js 24, and the pinned pnpm version. Install with
+`pnpm install --frozen-lockfile`, then use the build and deploy commands above.
+
+Verify sign-in, sign-out, and repository access after deployment. No database is required.
 
 ## Behavior and privacy
 
