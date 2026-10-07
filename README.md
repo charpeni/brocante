@@ -5,7 +5,9 @@ A marketplace for pull requests.
 Brocante turns your GitHub repository’s open pull requests into a 3D flea market. Browse the shops,
 spot aging PRs, and find your next review.
 
-![Brocante’s 3D demo marketplace, with pull-request shops and review-status signs around a central fountain](.github/assets/brocante-demo.png)
+<p align="center">
+  <img src=".github/assets/brocante-demo.png" width="760" alt="Brocante’s 3D demo marketplace, with pull-request shops and review-status signs around a central fountain">
+</p>
 
 ## Quick start
 
