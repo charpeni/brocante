@@ -1,7 +1,7 @@
 {
   "name": "brocante",
   "version": "1.0.0",
-  "description": "Generate local pull-request reports from GitHub.",
+  "description": "Brocante turns your GitHub repository’s open pull requests into a 3D flea market. Browse the shops, spot aging PRs, and find your next review.",
   "keywords": [
     "cli",
     "code-review",
