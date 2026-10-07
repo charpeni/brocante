@@ -54,7 +54,7 @@ bundled CLI, license, and this README, with no workspace runtime dependencies.
 ## Releases
 
 Publishing runs only through the [Publish CLI workflow](../../.github/workflows/publish-cli.yml).
-Update the package version, then push its matching tag, such as `cli/v1.0.0`. The workflow validates,
+Update the package version, then push its matching tag, such as `cli/v1.1.0`. The workflow validates,
 packs with pnpm, tests the tarball, and publishes it with OIDC authentication and provenance.
 Prereleases use the `next` npm tag; stable releases use `latest`.
 

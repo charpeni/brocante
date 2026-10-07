@@ -1,6 +1,6 @@
 {
   "name": "brocante",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Brocante turns your GitHub repository’s open pull requests into a 3D flea market. Browse the shops, spot aging PRs, and find your next review.",
   "keywords": [
     "cli",

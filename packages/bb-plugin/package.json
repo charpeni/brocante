@@ -2,7 +2,7 @@
   "name": "bb-plugin-brocante",
   "version": "1.0.0",
   "private": true,
-  "description": "Save portable 3D pull-request markets from bb.",
+  "description": "Brocante turns your GitHub repository’s open pull requests into a 3D flea market. Browse the shops, spot aging PRs, and find your next review.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs && bb plugin build",
@@ -23,7 +23,7 @@
   },
   "bb": {
     "name": "Brocante",
-    "description": "Save portable snapshots of Brocante’s 3D pull-request marketplace.",
+    "description": "Brocante turns your GitHub repository’s open pull requests into a 3D flea market. Browse the shops, spot aging PRs, and find your next review.",
     "branding": {
       "icon": "./assets/icon.svg"
     },
