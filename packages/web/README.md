@@ -54,9 +54,22 @@ cp .dev.vars.example .dev.vars
 openssl rand -base64 32
 ```
 
-Set `APP_URL`, `GITHUB_CLIENT_ID`, and `GITHUB_APP_SLUG` in `.dev.vars`. Add the generated base64 key
-as `SESSION_KEY` and the app’s client secret as `GITHUB_CLIENT_SECRET`. Keep credentials out of source
-control and client/public-prefixed variables. An app private key is unnecessary.
+### Runtime configuration
+
+The demo needs no configuration. GitHub sign-in requires the values below, except those marked optional.
+
+| Name                   | Type     | Purpose                                                                      |
+| ---------------------- | -------- | ---------------------------------------------------------------------------- |
+| `APP_URL`              | Variable | Application origin: `http://localhost:4321` locally; HTTPS when hosted.      |
+| `GITHUB_CLIENT_ID`     | Variable | GitHub App OAuth client ID.                                                  |
+| `GITHUB_APP_SLUG`      | Variable | Optional App slug for installation links, from `github.com/apps/<slug>`.     |
+| `GITHUB_CLIENT_SECRET` | Secret   | GitHub App OAuth client secret.                                              |
+| `SESSION_KEY`          | Secret   | Base64-encoded 32-byte random key, generated with `openssl rand -base64 32`. |
+| `GITHUB_PUBLIC_TOKEN`  | Secret   | Optional read-only token for public browsing without sign-in.                |
+
+Store local values in `packages/web/.dev.vars`. In Cloudflare, use **Runtime variables and secrets**,
+not build variables. Keep secrets out of source control and client/public-prefixed variables.
+Use a separate session key for each environment. An App private key is unnecessary.
 
 Restart the server, sign in, and enter `owner/repository` or its GitHub URL. Public repositories need
 no app installation. Private repositories require both an installation selecting the repository and
@@ -80,25 +93,33 @@ use their own token.
 
 ## Deploy to Cloudflare
 
-Customize `env.production` in `wrangler.jsonc` with your Worker name, HTTPS `APP_URL`, and domain.
-For a `workers.dev` address, remove `routes` and set `workers_dev: true`. Register
-`<APP_URL>/auth/callback` with your production GitHub App.
-
-Run from the repository root:
+Choose your Worker name in `env.production` in `wrangler.jsonc`. Build from the repository root:
 
 ```sh
 pnpm --filter @brocante/web exec wrangler login
 CLOUDFLARE_ENV=production pnpm build:web
-pnpm --filter @brocante/web exec wrangler deploy --env production
 ```
 
-Set `GITHUB_CLIENT_ID` and `GITHUB_APP_SLUG` as Worker runtime variables, and
-`GITHUB_CLIENT_SECRET` and a separate production `SESSION_KEY` as secrets. Optionally add
-`GITHUB_PUBLIC_TOKEN`. Local `.dev.vars` files are not deployed.
+For a new Worker, deploy once with
+`pnpm --filter @brocante/web exec wrangler deploy --env production`. Configure its domain,
+then add the runtime configuration above in Cloudflare's **Production** settings.
+Register `<APP_URL>/auth/callback` with your production GitHub App.
+Local `.dev.vars` files are not deployed.
+
+For subsequent deployments, preserve dashboard-managed domains and variables with:
+
+```sh
+pnpm --filter @brocante/web exec wrangler versions upload --env production --keep-vars
+pnpm --filter @brocante/web exec wrangler versions deploy --env production --yes
+```
 
 For GitHub deployments, connect your repository through Cloudflare Workers Builds. Use the
 repository root, Node.js 24, and the pinned pnpm version. Install with
-`pnpm install --frozen-lockfile`, then use the build and deploy commands above.
+`pnpm install --frozen-lockfile`, then use the build and version commands above.
+Enable preview builds with `pnpm --filter @brocante/web exec wrangler preview --env production`
+and configure their variables and secrets in Cloudflare's **Previews Base**.
+Previews do not inherit production configuration. For sign-in, set each preview's `APP_URL` to its
+own origin and register a matching GitHub App callback.
 
 Verify sign-in, sign-out, and repository access after deployment. No database is required.
 

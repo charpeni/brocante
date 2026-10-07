@@ -11,12 +11,22 @@
     "GITHUB_APP_SLUG": "",
   },
   "observability": { "enabled": false },
+  // Hosted runtime values are managed in Cloudflare's Variables & Secrets.
+  // Required for GitHub sign-in:
+  //   APP_URL (variable): HTTPS origin; GitHub callback is <APP_URL>/auth/callback.
+  //   GITHUB_CLIENT_ID (variable): GitHub App OAuth client ID.
+  //   GITHUB_CLIENT_SECRET (secret): GitHub App OAuth client secret.
+  //   SESSION_KEY (secret): base64-encoded 32-byte key; openssl rand -base64 32.
+  // Optional:
+  //   GITHUB_APP_SLUG (variable): App slug used for installation links.
+  //   GITHUB_PUBLIC_TOKEN (secret): read-only token for signed-out public browsing.
+  // Use separate session keys per environment. The demo needs none of these values.
   "keep_vars": true,
+  // Configure Previews Base separately; each preview needs its own APP_URL for sign-in.
+  "previews": {},
   "env": {
     "production": {
       "name": "brocante",
-      "vars": { "APP_URL": "https://brocante.dev" },
-      "routes": [{ "pattern": "brocante.dev", "custom_domain": true }],
     },
   },
 }
