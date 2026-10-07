@@ -1,6 +1,7 @@
-# Brocante
+# Brocante CLI
 
-Generate a local report of a GitHub repository's open pull requests.
+Generate local HTML, Markdown, and JSON reports of a GitHub repository’s open pull requests.
+Requires Node.js 22.12 or newer.
 
 ```sh
 npm install -g brocante
@@ -10,13 +11,27 @@ brocante withastro/astro --format json --output report.json
 brocante --demo --output demo.html
 ```
 
-Requires Node.js 22.12 or newer. Authentication uses `GH_TOKEN`, then `GITHUB_TOKEN`, then the GitHub CLI's `gh auth token`. Run `gh auth login` or supply a read-only token through your environment. No token is stored in a report. GitHub GraphQL requires authentication even for public repositories.
+## Authentication
 
-The default output is a standalone HTML report named `brocante-owner-repo.html`. It opens directly in a browser without a server or external assets. This report is a table and historical summary; the interactive 3D marketplace is in the web app. Markdown and JSON print to stdout unless `--output` is supplied. Use `--output -` to print HTML. Existing files are preserved unless `--force` is given; new files use owner-only permissions where supported.
+The CLI checks `GH_TOKEN`, then `GITHUB_TOKEN`, then `gh auth token`. Run `gh auth login` or provide a
+read-only token in your environment. GitHub requires authentication for public repositories too.
+Reports contain no tokens, but may contain private repository data.
 
-The default limit is ten pages of 60 PRs. Use `--max-pages 1` through `100` to change it. Capped reports are explicitly marked partial; GitHub search exposes at most 1,000 matches. Descriptions in JSON are capped at 6,000 characters, with `bodyTruncated` identifying shortened content. HTML and Markdown include the PR list and available 30-day historical counts, not descriptions. Counts may lag GitHub activity.
+## Output and limits
 
-GitHub failures stop the run without writing a partial report. Rate limits exit with code 3 and print the required retry delay. Malformed command syntax exits with code 2 and points to `--help`. Other errors exit with code 1. The CLI does not automatically retry. Reports can contain private repository information: store and share them accordingly.
+HTML defaults to `brocante-owner-repo.html` and opens in a browser without a server or external assets.
+Markdown and JSON print to stdout unless `--output` is supplied. Use `--output -` to print HTML and
+`--force` to overwrite an existing file. New files use owner-only permissions where supported.
+
+Reports include a PR table and available 30-day historical counts. JSON also includes descriptions,
+capped at 6,000 characters with a `bodyTruncated` flag. The interactive marketplace is in the web app.
+
+The default limit is ten pages of 60 PRs. Set `--max-pages` from 1 to 100 to change it. Capped reports
+are marked partial; GitHub search returns at most 1,000 matches. Historical counts may lag activity.
+
+GitHub errors stop the run without writing a report. Exit codes are `2` for invalid syntax, `3` for
+rate limits, and `1` for other failures. Rate-limit messages include the retry delay; retries are manual.
+Run `brocante --help` for all options.
 
 ## Development
 
@@ -28,4 +43,5 @@ node packages/cli/dist/cli.js --demo --output /tmp/brocante.html
 pnpm --filter brocante pack --pack-destination /tmp
 ```
 
-Version starts at `1.0.0`. The published package contains the bundled CLI and this README, with no workspace runtime dependencies. Publishing is a separate release step.
+Packing builds the CLI first. The npm package contains the bundled CLI and this README, with no
+workspace runtime dependencies. Publish it separately after validation.
