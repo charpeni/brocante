@@ -6,6 +6,7 @@ export interface Report extends Omit<MarketData, 'nextCursor'> {
   search: string;
   pagesFetched: number;
   complete: boolean;
+  demo?: true;
 }
 export type ReportFormat = 'html' | 'markdown' | 'json';
 export interface ReportOptions {
@@ -64,6 +65,11 @@ export function reportFromSnapshot(data: MarketData, search = '', pagesFetched =
   const { nextCursor, ...snapshot } = data;
   return {
     ...snapshot,
+    searchLimited: data.searchLimited ?? false,
+    pullRequests: data.pullRequests.map((pr) => ({
+      ...pr,
+      bodyTruncated: pr.bodyTruncated ?? false,
+    })),
     schemaVersion: 1,
     search,
     pagesFetched,
@@ -79,7 +85,7 @@ const escapeHtml = (value: string | number) =>
 const escapeMarkdown = (value: string | number) =>
   String(value)
     .replace(/[\r\n\t]/g, ' ')
-    .replace(/[\\`*_{}[\]()#+.!|<>~]/g, '\\$&');
+    .replace(/[\\`*_{}[\]()#+!|<>~]/g, '\\$&');
 const status = (pr: MarketData['pullRequests'][number]) => stateLabels[shopState(pr) ?? 'ready'];
 const githubUrl = (report: Report, number?: number) => {
   const repository = parseRepository(report.repository);
@@ -101,10 +107,14 @@ export function renderReport(
   const history = stats
     ? `Last 30 days: ${stats.opened} opened, ${stats.merged} merged. Previous 30 days: ${stats.previousOpened} opened, ${stats.previousMerged} merged.`
     : 'Historical counts unavailable.';
+  const footer = report.demo
+    ? 'Fictional demo for exploring Brocante. No live GitHub data.'
+    : 'Snapshot of GitHub data; counts can lag and requests can change during pagination.';
   if (format === 'markdown')
     return [
       `# Brocante — ${escapeMarkdown(report.repository)}`,
       '',
+      ...(report.demo ? ['Fictional demo. No live GitHub data.', ''] : []),
       `${count}. ${coverage}`,
       '',
       `Fetched: ${escapeMarkdown(report.fetchedAt)}${report.isPrivate ? ' · Private repository' : ''}`,
@@ -116,10 +126,10 @@ export function renderReport(
       '| --- | --- | --- | --- |',
       ...report.pullRequests.map(
         (pr) =>
-          `| [#${pr.number} ${escapeMarkdown(pr.title)}](${githubUrl(report, pr.number)}) | ${escapeMarkdown(pr.author)} | ${status(pr)} | ${pr.additions == null || pr.deletions == null ? 'Unknown' : `+${pr.additions} / −${pr.deletions}`} |`,
+          `| ${report.demo ? `#${pr.number} ${escapeMarkdown(pr.title)}` : `[#${pr.number} ${escapeMarkdown(pr.title)}](${githubUrl(report, pr.number)})`} | ${escapeMarkdown(pr.author)} | ${status(pr)} | ${pr.additions == null || pr.deletions == null ? 'Unknown' : `+${pr.additions} / −${pr.deletions}`} |`,
       ),
       '',
-      'Snapshot of GitHub data; counts can lag and requests can change during pagination.',
+      footer,
       '',
     ].join('\n');
   if (format !== 'html') throw new Error('Choose html, markdown, or json.');
@@ -128,11 +138,11 @@ export function renderReport(
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <title>Brocante — ${escapeHtml(report.repository)}</title>
 <style>body{font:16px/1.6 system-ui,sans-serif;color:#264b3d;background:#f6f1e6;margin:auto;padding:32px;max-width:1100px}h1{font:2.2em Georgia,serif}a{color:inherit}header,p{max-width:75ch}.table{overflow:auto}table{width:100%;border-collapse:collapse;background:#fff9}th,td{text-align:left;vertical-align:top;padding:12px;border-bottom:1px solid #264b3d30}th{white-space:nowrap}.note{border-left:3px solid #b64e36;padding-left:12px}footer{margin-top:32px;font-size:.85em}@media(max-width:600px){body{padding:16px}}</style></head>
-<body><header><p>Brocante · A marketplace for pull requests</p><h1>${escapeHtml(report.repository)}</h1>
+<body><header><p>Brocante · A marketplace for pull requests</p>${report.demo ? '<p class="note">Fictional demo. No live GitHub data.</p>' : ''}<h1>${escapeHtml(report.repository)}</h1>
 <p>${escapeHtml(count)} · ${report.isPrivate ? 'Private repository' : 'Public repository'}</p>
 <p>Fetched ${escapeHtml(report.fetchedAt)}</p>${report.search ? `<p>Search: ${escapeHtml(report.search)}</p>` : ''}
 <p class="note">${escapeHtml(coverage)}</p><p>${escapeHtml(history)}</p></header>
 <main class="table"><table><caption>Open pull requests</caption><thead><tr><th>Pull request</th><th>Author</th><th>Review state</th><th>Changes</th></tr></thead><tbody>
-${report.pullRequests.map((pr) => `<tr><td><a href="${escapeHtml(githubUrl(report, pr.number))}" rel="noreferrer">#${pr.number} ${escapeHtml(pr.title)}</a></td><td>${escapeHtml(pr.author)}</td><td>${escapeHtml(status(pr))}</td><td>${pr.additions == null || pr.deletions == null ? 'Unknown' : `+${pr.additions} / −${pr.deletions}`}</td></tr>`).join('\n')}
-</tbody></table></main><footer>Snapshot of GitHub data; counts can lag and requests can change during pagination. <a href="${escapeHtml(githubUrl(report))}" rel="noreferrer">View repository on GitHub</a></footer></body></html>\n`;
+${report.pullRequests.map((pr) => `<tr><td>${report.demo ? `#${pr.number} ${escapeHtml(pr.title)}` : `<a href="${escapeHtml(githubUrl(report, pr.number))}" rel="noreferrer">#${pr.number} ${escapeHtml(pr.title)}</a>`}</td><td>${escapeHtml(pr.author)}</td><td>${escapeHtml(status(pr))}</td><td>${pr.additions == null || pr.deletions == null ? 'Unknown' : `+${pr.additions} / −${pr.deletions}`}</td></tr>`).join('\n')}
+</tbody></table></main><footer>${escapeHtml(footer)}${report.demo ? '' : ` <a href="${escapeHtml(githubUrl(report))}" rel="noreferrer">View repository on GitHub</a>`}</footer></body></html>\n`;
 }

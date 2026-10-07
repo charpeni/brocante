@@ -1,8 +1,10 @@
 import { parseArgs } from 'node:util';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { stat, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { constants } from 'node:fs';
+import { access, lstat, stat, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { version } from '../package.json';
 import {
   generateReport,
   renderReport,
@@ -13,19 +15,25 @@ import {
 } from '@brocante/core';
 import { demoMarket } from '@brocante/core/demo';
 
-const help = `Brocante 1.0.0 — local pull-request reports
+const optionsHelp = [
+  ['--format <html|markdown|json>', 'Report format (default: html)'],
+  ['--output <path|->', 'File path, or - for stdout'],
+  ['--search <query>', "GitHub search within this repository's open PRs"],
+  ['--max-pages <1-100>', 'Page limit, 60 PRs per page (default: 10)'],
+  ['--force', 'Replace an existing output file'],
+  ['--demo', 'Generate a fictional report without credentials'],
+  ['--help', 'Show help'],
+  ['--version', 'Show version'],
+]
+  .map(([option, description]) => `  ${option.padEnd(30)}${description}`)
+  .join('\n');
+
+const help = `Brocante ${version} — local pull-request reports
 
 Usage: brocante [report] <owner/repo> [options]
        brocante --demo [options]
 
-  --format <html|markdown|json>  Report format (default: html)
-  --output <path|->             File path, or - for stdout
-  --search <query>              GitHub search within this repository's open PRs
-  --max-pages <1-100>           Page limit, 60 PRs per page (default: 10)
-  --force                      Replace an existing output file
-  --demo                       Generate a fictional report without credentials
-  --help                       Show help
-  --version                    Show version
+${optionsHelp}
 
 Authentication: GH_TOKEN, then GITHUB_TOKEN, then gh auth token.
 HTML defaults to brocante-owner-repo.html; Markdown and JSON default to stdout.
@@ -52,6 +60,24 @@ async function ghToken() {
     return '';
   }
 }
+const directoryAdvice =
+  'The output path is a directory. Choose a file path such as --output report.html, or use --output - to print.';
+
+async function checkOutput(path: string, force: boolean) {
+  const entry = await lstat(path).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (entry) {
+    if ((entry.isSymbolicLink() ? await stat(path).catch(() => null) : entry)?.isDirectory())
+      throw new Error(directoryAdvice);
+    if (!force) throw Object.assign(new Error('Output exists.'), { code: 'EEXIST' });
+    await access(path, constants.W_OK);
+  } else {
+    await access(dirname(path), constants.W_OK);
+  }
+}
+
 export async function runCli(argv: string[], overrides: Partial<CliIO> = {}): Promise<number> {
   const io: CliIO = {
     env: process.env,
@@ -86,43 +112,51 @@ export async function runCli(argv: string[], overrides: Partial<CliIO> = {}): Pr
       return 0;
     }
     if (values.version) {
-      io.stdout('1.0.0\n');
+      io.stdout(`${version}\n`);
       return 0;
     }
     if (positionals[0] === 'report') positionals.shift();
     if (positionals.length > 1 || (values.demo && positionals.length > 0))
       throw new Error('Choose one repository, or --demo without a repository.');
-    const repository = values.demo ? 'brocante/weekend-bazaar' : positionals[0];
-    if (!repository || !parseRepository(repository))
-      throw new Error('Use brocante owner/repo, or brocante --demo.');
+    const demo = values.demo ? demoMarket() : null;
+    const repository = demo?.repository ?? positionals[0];
+    const parsed = repository && parseRepository(repository);
+    if (!parsed) throw new Error('Use brocante owner/repo, or brocante --demo.');
     if (!['html', 'markdown', 'json'].includes(values.format!))
       throw new Error('Choose --format html, markdown, or json.');
     const maxPages = Number(values['max-pages']);
-    if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > 100)
+    if (!/^\d+$/.test(values['max-pages']!) || maxPages < 1 || maxPages > 100)
       throw new Error('--max-pages must be an integer from 1 to 100.');
     if (values.demo && values.search) throw new Error('--search requires a live repository.');
+    const format = values.format as ReportFormat;
+    const output =
+      values.output ?? (format === 'html' ? `brocante-${parsed.owner}-${parsed.repo}.html` : '-');
+    const path = output === '-' ? null : resolve(io.cwd, output);
+    if (path) await checkOutput(path, values.force ?? false);
     const token = values.demo
       ? ''
       : io.env.GH_TOKEN?.trim() || io.env.GITHUB_TOKEN?.trim() || (await io.ghToken());
     if (!values.demo && !token)
       throw new Error('Sign in with gh auth login, or set GH_TOKEN / GITHUB_TOKEN.');
-    const report = values.demo
-      ? reportFromSnapshot(demoMarket())
+    if (
+      /\s/.test(token) ||
+      [...token].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)
+    )
+      throw new Error(
+        'The GitHub token contains whitespace or control characters. Check GH_TOKEN / GITHUB_TOKEN or sign in again with gh auth login.',
+      );
+    const report = demo
+      ? { ...reportFromSnapshot(demo), demo: true as const }
       : await generateReport({
-          repository,
+          repository: `${parsed.owner}/${parsed.repo}`,
           token,
           search: values.search,
           maxPages,
           fetcher: io.fetcher,
         });
-    const format = values.format as ReportFormat;
     const content = renderReport(report, format);
-    const output =
-      values.output ??
-      (format === 'html' ? `brocante-${report.repository.replace('/', '-')}.html` : '-');
-    if (output === '-') io.stdout(content);
+    if (!path) io.stdout(content);
     else {
-      const path = resolve(io.cwd, output);
       // Reports can contain private repository data; don't overwrite by default.
       try {
         await writeFile(path, content, { flag: values.force ? 'w' : 'wx', mode: 0o600 });
@@ -134,9 +168,7 @@ export async function runCli(argv: string[], overrides: Partial<CliIO> = {}): Pr
           code === 'EISDIR' ||
           (code === 'EEXIST' && (await stat(path).catch(() => null))?.isDirectory())
         ) {
-          throw new Error(
-            'The output path is a directory. Choose a file path such as --output report.html, or use --output - to print.',
-          );
+          throw new Error(directoryAdvice);
         }
         throw error;
       }
@@ -157,6 +189,18 @@ export async function runCli(argv: string[], overrides: Partial<CliIO> = {}): Pr
       );
       return 1;
     }
+    if (['ENOENT', 'ENOTDIR'].includes(code)) {
+      io.stderr(
+        'The output directory does not exist. Create it or choose another --output path.\n',
+      );
+      return 1;
+    }
+    if (['EACCES', 'EPERM', 'EROFS'].includes(code)) {
+      io.stderr(
+        'The output path is not writable. Check its permissions or choose another --output path.\n',
+      );
+      return 1;
+    }
     if (error instanceof GitHubError) {
       const message =
         error.status === 401
@@ -167,9 +211,7 @@ export async function runCli(argv: string[], overrides: Partial<CliIO> = {}): Pr
       );
       return error.status === 429 ? 3 : 1;
     }
-    if (error instanceof TypeError)
-      io.stderr('Unable to reach GitHub. Check your network and try again.\n');
-    else io.stderr(`${error instanceof Error ? error.message : 'Report generation failed.'}\n`);
+    io.stderr(`${error instanceof Error ? error.message : 'Report generation failed.'}\n`);
     return 1;
   }
 }

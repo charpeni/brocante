@@ -1,0 +1,59 @@
+name: Publish CLI
+
+on:
+  push:
+    tags:
+      - 'cli/v*'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Require a public repository for provenance
+        if: github.event.repository.private
+        run: |
+          echo 'npm provenance requires a public source repository.' >&2
+          exit 1
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Use an npm version with trusted publishing support
+        run: npm install --global npm@11
+      - name: Verify release tag
+        id: release
+        run: pnpm --filter brocante verify:tag "$GITHUB_REF_NAME"
+      - run: pnpm install --frozen-lockfile
+      - name: Validate
+        run: |
+          pnpm lint
+          pnpm format:check
+          pnpm check
+          pnpm test
+      - name: Pack the CLI
+        run: pnpm --filter brocante pack --pack-destination "$RUNNER_TEMP/brocante-package"
+      - name: Test the packed package
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          npm install --prefix "$RUNNER_TEMP/brocante-smoke" --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP/brocante-package/brocante-${VERSION}.tgz"
+          test -f "$RUNNER_TEMP/brocante-smoke/node_modules/brocante/LICENSE"
+          test "$("$RUNNER_TEMP/brocante-smoke/node_modules/.bin/brocante" --version)" = "$VERSION"
+          "$RUNNER_TEMP/brocante-smoke/node_modules/.bin/brocante" --demo --format json --output "$RUNNER_TEMP/brocante-smoke/demo.json"
+      - name: Publish with OIDC and provenance
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          DIST_TAG: ${{ steps.release.outputs.dist_tag }}
+        run: npm publish "$RUNNER_TEMP/brocante-package/brocante-${VERSION}.tgz" --access public --provenance --tag "$DIST_TAG"

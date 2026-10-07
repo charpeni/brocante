@@ -2,8 +2,25 @@
   "name": "brocante",
   "version": "1.0.0",
   "description": "Generate local pull-request reports from GitHub.",
+  "keywords": [
+    "cli",
+    "code-review",
+    "github",
+    "pull-requests"
+  ],
+  "homepage": "https://github.com/charpeni/brocante/tree/main/packages/cli#readme",
+  "bugs": {
+    "url": "https://github.com/charpeni/brocante/issues"
+  },
+  "license": "MIT",
+  "author": "Nicolas Charpentier",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/charpeni/brocante.git",
+    "directory": "packages/cli"
+  },
   "bin": {
-    "brocante": "./dist/cli.js"
+    "brocante": "dist/cli.js"
   },
   "files": [
     "dist",
@@ -14,7 +31,8 @@
     "build": "node scripts/build.mjs",
     "check": "tsc --noEmit",
     "test": "vitest run",
-    "prepack": "pnpm build"
+    "prepack": "pnpm build",
+    "verify:tag": "node scripts/check-tag.mjs"
   },
   "devDependencies": {
     "@brocante/core": "workspace:*",

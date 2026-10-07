@@ -18,24 +18,33 @@ function rateLimited(response: Response) {
     60_000,
   );
   return new GitHubError(
-    'GitHub’s request limit has been reached. Please wait before refreshing.',
+    'GitHub’s request limit has been reached. Please wait before trying again.',
     429,
     Math.ceil(delay / 1000),
   );
 }
 export async function github(token: string, path: string, init: RequestInit = {}, fetcher = fetch) {
-  const response = await fetcher(`https://api.github.com${path}`, {
-    ...init,
-    headers: {
-      Accept: 'application/vnd.github+json',
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'review-market',
-      ...init.headers,
-    },
-    signal: AbortSignal.timeout(20_000),
-  });
+  let response: Response;
+  try {
+    response = await fetcher(`https://api.github.com${path}`, {
+      ...init,
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'brocante',
+        ...init.headers,
+      },
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (error) {
+    if (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name))
+      throw new GitHubError('The GitHub request timed out. Please try again.', 504);
+    if (error instanceof TypeError)
+      throw new GitHubError('Unable to reach GitHub. Check your network and try again.', 503);
+    throw error;
+  }
   if (!response.ok) {
     if (response.status === 401)
       throw new GitHubError('Your GitHub session expired. Please sign in again.', 401);
@@ -49,7 +58,7 @@ export async function github(token: string, path: string, init: RequestInit = {}
       throw rateLimited(response);
     if (response.status === 403 || response.status === 404)
       throw new GitHubError(
-        'This repository is unavailable. For a private repository, check your access and the GitHub App installation.',
+        'This repository is unavailable. Check its name and your GitHub credentials and permissions.',
         403,
       );
     throw new GitHubError(
@@ -188,7 +197,11 @@ export async function loadMarket(
     },
     fetcher,
   );
-  const result: GraphResponse = await response.json();
+  const result: GraphResponse = await response.json().catch(() => {
+    throw new GitHubError('GitHub returned an unreadable response. Please try again.', 502);
+  });
+  if (!result || typeof result !== 'object' || Array.isArray(result))
+    throw new GitHubError('GitHub returned an unreadable response. Please try again.', 502);
   if (result.errors?.some((error) => error.type === 'RATE_LIMITED')) throw rateLimited(response);
   const connection = query ? result.data?.search : result.data?.repository?.pullRequests;
   // Reviewer identities are optional. Permission errors at this exact leaf must
@@ -240,20 +253,24 @@ export async function loadMarket(
     );
     throw new GitHubError(
       accessFailure
-        ? 'Unable to read this repository. Check its name, your access, and the GitHub App installation for private repositories.'
-        : 'GitHub could not return a complete market. Please try again.',
+        ? 'Unable to read this repository. Check its name and your GitHub credentials and permissions.'
+        : 'GitHub could not return complete pull-request data. Please try again.',
       accessFailure ? 403 : 502,
       accessFailure ? undefined : 60,
     );
   }
   if (!result.data?.repository)
     throw new GitHubError(
-      'Unable to read this repository. Check its name, your access, and the GitHub App installation for private repositories.',
+      'Unable to read this repository. Check its name and your GitHub credentials and permissions.',
       403,
     );
   const source = result.data.repository;
   if (!connection)
-    throw new GitHubError('GitHub could not return a complete market. Please try again.', 502, 60);
+    throw new GitHubError(
+      'GitHub could not return complete pull-request data. Please try again.',
+      502,
+      60,
+    );
   if (
     query &&
     connection.nodes.some(

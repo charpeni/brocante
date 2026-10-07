@@ -90,4 +90,14 @@ describe('local reports', () => {
     expect(renderReport(report, 'markdown')).toContain('\\| forged');
     expect(html).toContain("default-src 'none'");
   });
+  it('labels fictional reports and omits live repository links', () => {
+    const report = { ...reportFromSnapshot(demoMarket()), demo: true as const };
+    const html = renderReport(report, 'html');
+    const markdown = renderReport(report, 'markdown');
+    expect(html).toContain('Fictional demo');
+    expect(markdown).toContain('Fictional demo');
+    expect(html).not.toContain('href=');
+    expect(markdown).not.toContain('https://github.com/');
+    expect(markdown).toContain(report.fetchedAt);
+  });
 });

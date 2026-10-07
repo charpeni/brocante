@@ -32,6 +32,38 @@ function response(body: unknown, init?: ResponseInit) {
   return vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(body), init));
 }
 afterEach(() => vi.useRealTimers());
+
+it.each([
+  {
+    error: new TypeError('fetch failed: private detail'),
+    message: 'Unable to reach GitHub',
+    status: 503,
+  },
+  { error: new DOMException('private detail', 'TimeoutError'), message: 'timed out', status: 504 },
+  { error: new DOMException('private detail', 'AbortError'), message: 'timed out', status: 504 },
+])('sanitizes request failures: $message', async ({ error, message, status }) => {
+  await expect(
+    github('token', '/user', {}, vi.fn<typeof fetch>().mockRejectedValue(error)),
+  ).rejects.toMatchObject({ message: expect.stringContaining(message), status });
+});
+
+it.each(['<html>private detail</html>', 'null', '"private detail"'])(
+  'does not echo unreadable API responses',
+  async (body) => {
+    await expect(
+      loadMarket(
+        'token',
+        'o',
+        'r',
+        null,
+        vi.fn<typeof fetch>().mockResolvedValue(new Response(body)),
+      ),
+    ).rejects.toMatchObject({
+      status: 502,
+      message: 'GitHub returned an unreadable response. Please try again.',
+    });
+  },
+);
 it('loads repository-wide historical counts independently of PR searches', async () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-10-05T12:00:00Z'));

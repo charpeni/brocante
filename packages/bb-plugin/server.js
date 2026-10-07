@@ -76,24 +76,33 @@ function rateLimited(response) {
     6e4
   );
   return new GitHubError(
-    "GitHub\u2019s request limit has been reached. Please wait before refreshing.",
+    "GitHub\u2019s request limit has been reached. Please wait before trying again.",
     429,
     Math.ceil(delay / 1e3)
   );
 }
 async function github(token, path, init = {}, fetcher = fetch) {
-  const response = await fetcher(`https://api.github.com${path}`, {
-    ...init,
-    headers: {
-      Accept: "application/vnd.github+json",
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "review-market",
-      ...init.headers
-    },
-    signal: AbortSignal.timeout(2e4)
-  });
+  let response;
+  try {
+    response = await fetcher(`https://api.github.com${path}`, {
+      ...init,
+      headers: {
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "brocante",
+        ...init.headers
+      },
+      signal: AbortSignal.timeout(2e4)
+    });
+  } catch (error) {
+    if (error instanceof Error && ["TimeoutError", "AbortError"].includes(error.name))
+      throw new GitHubError("The GitHub request timed out. Please try again.", 504);
+    if (error instanceof TypeError)
+      throw new GitHubError("Unable to reach GitHub. Check your network and try again.", 503);
+    throw error;
+  }
   if (!response.ok) {
     if (response.status === 401)
       throw new GitHubError("Your GitHub session expired. Please sign in again.", 401);
@@ -101,7 +110,7 @@ async function github(token, path, init = {}, fetcher = fetch) {
       throw rateLimited(response);
     if (response.status === 403 || response.status === 404)
       throw new GitHubError(
-        "This repository is unavailable. For a private repository, check your access and the GitHub App installation.",
+        "This repository is unavailable. Check its name and your GitHub credentials and permissions.",
         403
       );
     throw new GitHubError(
@@ -189,7 +198,11 @@ async function loadMarket(token, owner, repo, cursor, fetcher = fetch, search = 
     },
     fetcher
   );
-  const result = await response.json();
+  const result = await response.json().catch(() => {
+    throw new GitHubError("GitHub returned an unreadable response. Please try again.", 502);
+  });
+  if (!result || typeof result !== "object" || Array.isArray(result))
+    throw new GitHubError("GitHub returned an unreadable response. Please try again.", 502);
   if (result.errors?.some((error) => error.type === "RATE_LIMITED")) throw rateLimited(response);
   const connection = query ? result.data?.search : result.data?.repository?.pullRequests;
   const errors = result.errors?.filter((error) => {
@@ -211,19 +224,23 @@ async function loadMarket(token, owner, repo, cursor, fetcher = fetch, search = 
       (error) => ["FORBIDDEN", "NOT_FOUND"].includes(error.type ?? "") && error.path?.length === 1 && error.path[0] === "repository"
     );
     throw new GitHubError(
-      accessFailure ? "Unable to read this repository. Check its name, your access, and the GitHub App installation for private repositories." : "GitHub could not return a complete market. Please try again.",
+      accessFailure ? "Unable to read this repository. Check its name and your GitHub credentials and permissions." : "GitHub could not return complete pull-request data. Please try again.",
       accessFailure ? 403 : 502,
       accessFailure ? void 0 : 60
     );
   }
   if (!result.data?.repository)
     throw new GitHubError(
-      "Unable to read this repository. Check its name, your access, and the GitHub App installation for private repositories.",
+      "Unable to read this repository. Check its name and your GitHub credentials and permissions.",
       403
     );
   const source = result.data.repository;
   if (!connection)
-    throw new GitHubError("GitHub could not return a complete market. Please try again.", 502, 60);
+    throw new GitHubError(
+      "GitHub could not return complete pull-request data. Please try again.",
+      502,
+      60
+    );
   if (query && connection.nodes.some(
     (pr) => pr && (pr.__typename !== "PullRequest" || pr.repository?.nameWithOwner.toLowerCase() !== source.nameWithOwner.toLowerCase())
   ))
@@ -316,6 +333,11 @@ function reportFromSnapshot(data, search = "", pagesFetched = 1) {
   const { nextCursor, ...snapshot } = data;
   return {
     ...snapshot,
+    searchLimited: data.searchLimited ?? false,
+    pullRequests: data.pullRequests.map((pr) => ({
+      ...pr,
+      bodyTruncated: pr.bodyTruncated ?? false
+    })),
     schemaVersion: 1,
     search,
     pagesFetched,
@@ -326,7 +348,7 @@ var escapeHtml = (value) => String(value).replace(
   /[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
 );
-var escapeMarkdown = (value) => String(value).replace(/[\r\n\t]/g, " ").replace(/[\\`*_{}[\]()#+.!|<>~]/g, "\\$&");
+var escapeMarkdown = (value) => String(value).replace(/[\r\n\t]/g, " ").replace(/[\\`*_{}[\]()#+!|<>~]/g, "\\$&");
 var status = (pr) => stateLabels[shopState(pr) ?? "ready"];
 var githubUrl = (report, number) => {
   const repository = parseRepository(report.repository);
@@ -339,10 +361,12 @@ function renderReport(report, format, options = {}) {
   const coverage = report.complete ? "All available pages fetched." : `Partial report: more results may be available. ${options.partialHint ?? "Increase --max-pages or narrow --search."}`;
   const stats = report.repositoryStats;
   const history = stats ? `Last 30 days: ${stats.opened} opened, ${stats.merged} merged. Previous 30 days: ${stats.previousOpened} opened, ${stats.previousMerged} merged.` : "Historical counts unavailable.";
+  const footer = report.demo ? "Fictional demo for exploring Brocante. No live GitHub data." : "Snapshot of GitHub data; counts can lag and requests can change during pagination.";
   if (format === "markdown")
     return [
       `# Brocante \u2014 ${escapeMarkdown(report.repository)}`,
       "",
+      ...report.demo ? ["Fictional demo. No live GitHub data.", ""] : [],
       `${count}. ${coverage}`,
       "",
       `Fetched: ${escapeMarkdown(report.fetchedAt)}${report.isPrivate ? " \xB7 Private repository" : ""}`,
@@ -353,10 +377,10 @@ function renderReport(report, format, options = {}) {
       "| Pull request | Author | Review state | Changes |",
       "| --- | --- | --- | --- |",
       ...report.pullRequests.map(
-        (pr) => `| [#${pr.number} ${escapeMarkdown(pr.title)}](${githubUrl(report, pr.number)}) | ${escapeMarkdown(pr.author)} | ${status(pr)} | ${pr.additions == null || pr.deletions == null ? "Unknown" : `+${pr.additions} / \u2212${pr.deletions}`} |`
+        (pr) => `| ${report.demo ? `#${pr.number} ${escapeMarkdown(pr.title)}` : `[#${pr.number} ${escapeMarkdown(pr.title)}](${githubUrl(report, pr.number)})`} | ${escapeMarkdown(pr.author)} | ${status(pr)} | ${pr.additions == null || pr.deletions == null ? "Unknown" : `+${pr.additions} / \u2212${pr.deletions}`} |`
       ),
       "",
-      "Snapshot of GitHub data; counts can lag and requests can change during pagination.",
+      footer,
       ""
     ].join("\n");
   if (format !== "html") throw new Error("Choose html, markdown, or json.");
@@ -365,13 +389,13 @@ function renderReport(report, format, options = {}) {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <title>Brocante \u2014 ${escapeHtml(report.repository)}</title>
 <style>body{font:16px/1.6 system-ui,sans-serif;color:#264b3d;background:#f6f1e6;margin:auto;padding:32px;max-width:1100px}h1{font:2.2em Georgia,serif}a{color:inherit}header,p{max-width:75ch}.table{overflow:auto}table{width:100%;border-collapse:collapse;background:#fff9}th,td{text-align:left;vertical-align:top;padding:12px;border-bottom:1px solid #264b3d30}th{white-space:nowrap}.note{border-left:3px solid #b64e36;padding-left:12px}footer{margin-top:32px;font-size:.85em}@media(max-width:600px){body{padding:16px}}</style></head>
-<body><header><p>Brocante \xB7 A marketplace for pull requests</p><h1>${escapeHtml(report.repository)}</h1>
+<body><header><p>Brocante \xB7 A marketplace for pull requests</p>${report.demo ? '<p class="note">Fictional demo. No live GitHub data.</p>' : ""}<h1>${escapeHtml(report.repository)}</h1>
 <p>${escapeHtml(count)} \xB7 ${report.isPrivate ? "Private repository" : "Public repository"}</p>
 <p>Fetched ${escapeHtml(report.fetchedAt)}</p>${report.search ? `<p>Search: ${escapeHtml(report.search)}</p>` : ""}
 <p class="note">${escapeHtml(coverage)}</p><p>${escapeHtml(history)}</p></header>
 <main class="table"><table><caption>Open pull requests</caption><thead><tr><th>Pull request</th><th>Author</th><th>Review state</th><th>Changes</th></tr></thead><tbody>
-${report.pullRequests.map((pr) => `<tr><td><a href="${escapeHtml(githubUrl(report, pr.number))}" rel="noreferrer">#${pr.number} ${escapeHtml(pr.title)}</a></td><td>${escapeHtml(pr.author)}</td><td>${escapeHtml(status(pr))}</td><td>${pr.additions == null || pr.deletions == null ? "Unknown" : `+${pr.additions} / \u2212${pr.deletions}`}</td></tr>`).join("\n")}
-</tbody></table></main><footer>Snapshot of GitHub data; counts can lag and requests can change during pagination. <a href="${escapeHtml(githubUrl(report))}" rel="noreferrer">View repository on GitHub</a></footer></body></html>
+${report.pullRequests.map((pr) => `<tr><td>${report.demo ? `#${pr.number} ${escapeHtml(pr.title)}` : `<a href="${escapeHtml(githubUrl(report, pr.number))}" rel="noreferrer">#${pr.number} ${escapeHtml(pr.title)}</a>`}</td><td>${escapeHtml(pr.author)}</td><td>${escapeHtml(status(pr))}</td><td>${pr.additions == null || pr.deletions == null ? "Unknown" : `+${pr.additions} / \u2212${pr.deletions}`}</td></tr>`).join("\n")}
+</tbody></table></main><footer>${escapeHtml(footer)}${report.demo ? "" : ` <a href="${escapeHtml(githubUrl(report))}" rel="noreferrer">View repository on GitHub</a>`}</footer></body></html>
 `;
 }
 
