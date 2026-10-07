@@ -109,9 +109,12 @@ Local `.dev.vars` files are not deployed.
 For subsequent deployments, preserve dashboard-managed domains and variables with:
 
 ```sh
-pnpm --filter @brocante/web exec wrangler versions upload --env production --keep-vars
-pnpm --filter @brocante/web exec wrangler versions deploy --env production --yes
+DEPLOY_TAG=$(node -e 'console.log(crypto.randomUUID())') &&
+pnpm --filter @brocante/web exec wrangler versions upload --env production --keep-vars --tag "$DEPLOY_TAG" &&
+pnpm --filter @brocante/web exec wrangler versions deploy --env production --version-tag "$DEPLOY_TAG@100%" --yes
 ```
+
+The unique tag selects the uploaded version explicitly; `--yes` only accepts prompt defaults.
 
 For GitHub deployments, connect your repository through Cloudflare Workers Builds. Use the
 repository root, Node.js 24, and the pinned pnpm version. Install with

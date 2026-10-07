@@ -27,6 +27,7 @@
   "env": {
     "production": {
       "name": "brocante",
+      "vars": {}, // Preserve dashboard-managed values via keep_vars.
     },
   },
 }
