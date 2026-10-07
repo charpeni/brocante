@@ -205,7 +205,7 @@ banner "Connect Brocante to GitHub"
 
 stage "Choose the sign-in origin"
 say "Public settings and the session key go into the ignored .dev.vars file."
-say "The GitHub client secret will use BB's secure form, never chat or visible input."
+say "The GitHub client secret will use bb's secure form, never chat or visible input."
 say "This configures local development. Production uses Cloudflare variables and secrets."
 step "Use the HTTPS URL that opens this running app, or http://localhost:4321 on this machine."
 note "Plain HTTP LAN addresses cannot be used for authenticated sessions."
@@ -300,7 +300,7 @@ else
 fi
 unset BROCANTE_SESSION_KEY
 step "Under Client secrets, click Generate a new client secret."
-step "Copy it into the secure BB form that opens next. Do not paste it into chat."
+step "Copy it into the secure bb form that opens next. Do not paste it into chat."
 bb secret request GITHUB_CLIENT_SECRET \
   --purpose "Connect Brocante's local development server to its GitHub App" \
   --describe GITHUB_CLIENT_SECRET "Client secret from the GitHub App's General settings" \

@@ -1,4 +1,4 @@
-Browse a repository's open pull requests and recent activity from a BB terminal or agent thread.
+Browse a repository's open pull requests and recent activity from a bb terminal or agent thread.
 
 ## What you get
 
@@ -10,4 +10,4 @@ Each request reads up to 60 PRs from GitHub. Reports identify when more results 
 
 ## Requirements
 
-Install from this repository’s package-scoped `bb-plugin/` Git tags. The plugin is not published on npm. Requires BB 0.45 or newer and a GitHub read-only token configured in the plugin's secret settings. Requests run on the BB server using that token's access. The separate Brocante CLI can generate larger local HTML reports.
+Install from this repository’s package-scoped `bb-plugin/` Git tags. The plugin is not published on npm. Requires bb 0.45 or newer and a GitHub read-only token configured in the plugin's secret settings. Requests run on the bb server using that token's access. The separate Brocante CLI can generate larger local HTML reports.

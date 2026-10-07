@@ -35,7 +35,7 @@ TypeScript is pinned to the compatible 6.x line because the installed Astro chec
 
 ## Connect GitHub
 
-For guided local setup in BB, run `pnpm setup:github` in an interactive terminal. The wizard opens GitHub registration, explains the required settings, saves public configuration to ignored `.dev.vars`, generates a session key, and requests the client secret through BB's secure form. It requires Bash, Node, and the `bb` CLI. It does not deploy or change Cloudflare production secrets.
+For guided local setup in bb, run `pnpm setup:github` in an interactive terminal. The wizard opens GitHub registration, explains the required settings, saves public configuration to ignored `.dev.vars`, generates a session key, and requests the client secret through bb's secure form. It requires Bash, Node, and the `bb` CLI. It does not deploy or change Cloudflare production secrets.
 
 Choose a canonical origin first. `http://localhost:4321` works only in a browser on the server's machine. To sign in from another device, use an HTTPS development URL or deployment; the HTTP LAN preview supports the demo and optional public browsing, but not GitHub sign-in. Register `<APP_URL>/auth/callback` exactly, and start sign-in at that same origin. An alternate host redirects to the configured origin before creating the login cookie. Sign-in preserves the repository and search through a validated local return path in the sealed login transaction.
 
@@ -69,7 +69,7 @@ Public repositories can be viewed with the user token without installing the App
 
 Optionally set `GITHUB_PUBLIC_TOKEN` in `.dev.vars`. Use a fine-grained personal access token restricted to **Public repositories (read-only)**, with no private-repository or write access. This works without configuring OAuth. GitHub GraphQL still requires a token; anonymous visitors share this token's rate allowance. Keep track of its expiry and rotate it when needed.
 
-In BB, enter it through the secure form:
+In bb, enter it through the secure form:
 
 ```sh
 bb secret request GITHUB_PUBLIC_TOKEN --purpose "Enable public repository browsing" --describe GITHUB_PUBLIC_TOKEN "Server-only GitHub token for public read-only access" --write-env .dev.vars

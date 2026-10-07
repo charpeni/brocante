@@ -1,4 +1,4 @@
-# Brocante for BB
+# Brocante for bb
 
 Read pull-request reports with `bb brocante report owner/repository`.
 
@@ -9,7 +9,7 @@ pnpm build:plugin
 bb plugin install ./packages/bb-plugin
 ```
 
-Requires BB 0.45 or newer with Plugin SDK 0.6.15 (the 0.6 series). Set **GitHub read-only token** in Brocante's plugin settings. The secret is stored by BB on the server. Use a token with access only to the repositories you intend to read. The plugin does not use the invoking machine's GitHub CLI credentials.
+Requires bb 0.45 or newer with Plugin SDK 0.6.15 (the 0.6 series). Set **GitHub read-only token** in Brocante's plugin settings. The secret is stored by bb on the server. Use a token with access only to the repositories you intend to read. The plugin does not use the invoking machine's GitHub CLI credentials.
 
 ```sh
 bb brocante report withastro/astro
@@ -18,13 +18,13 @@ bb brocante report withastro/astro --search 'label:bug' --format json
 
 Each command fetches one page of up to 60 open pull requests, with optional repository-wide historical counts. Reports explicitly identify incomplete pagination. Descriptions are omitted from plugin output to keep responses bounded; PR links lead to GitHub. Use the standalone `brocante` CLI for larger local HTML, JSON, or Markdown files.
 
-Commands run on the BB server and return text; they do not write to the invoking machine. Read failures stop the command. Rate limits report the retry delay and block further plugin requests until the deadline. The plugin has no background polling or persistent report cache.
+Commands run on the bb server and return text; they do not write to the invoking machine. Read failures stop the command. Rate limits report the retry delay and block further plugin requests until the deadline. The plugin has no background polling or persistent report cache.
 
 ## Git releases
 
 This package is `private: true`. It is distributed from Git, not npm. Tags are scoped to this package: `bb-plugin/v1.0.0`, `bb-plugin/v1.0.1`, and so on. The version in `package.json` must match the tag version.
 
-The build bundles the private core into the version-controlled `server.js`, then runs `bb plugin build` to validate the manifest and produce SDK metadata. The generated entry imports only the SDK supplied by BB; Git installs can build it without sibling packages or a workspace install. The build-time source imports the core’s public entry through a relative path; the generated entry contains that code. Its devDependencies intentionally contain no `workspace:` references, because BB installs Git packages with npm.
+The build bundles the private core into the version-controlled `server.js`, then runs `bb plugin build` to validate the manifest and produce SDK metadata. The generated entry imports only the SDK supplied by bb; Git installs can build it without sibling packages or a workspace install. The build-time source imports the core’s public entry through a relative path; the generated entry contains that code. Its devDependencies intentionally contain no `workspace:` references, because bb installs Git packages with npm.
 
 Before creating a release tag:
 

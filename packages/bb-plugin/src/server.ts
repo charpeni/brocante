@@ -41,7 +41,7 @@ export default function plugin(bb: BbPluginApi) {
                 { code: 'rate_limited' },
               );
             try {
-              // One page keeps the command comfortably within BB’s output ceiling.
+              // One page keeps the command comfortably within bb’s output ceiling.
               const report = await generateReport({
                 repository: input.positionals.repository,
                 token: githubToken,

@@ -1,6 +1,6 @@
 # Brocante core
 
-Private workspace package shared by the web app, CLI, and BB plugin. It owns the GitHub adapter, pull-request types and shop state, scoped search, retry parsing, and report generation. It has no dependency on Astro, React, Node filesystem APIs, or BB.
+Private workspace package shared by the web app, CLI, and bb plugin. It owns the GitHub adapter, pull-request types and shop state, scoped search, retry parsing, and report generation. It has no dependency on Astro, React, Node filesystem APIs, or bb.
 
 The CLI and plugin bundle this package into their distributable artifacts. It is not published to npm. The web app imports its TypeScript source through workspace exports.
 

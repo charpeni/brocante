@@ -2,7 +2,7 @@
   "name": "bb-plugin-brocante",
   "version": "1.0.0",
   "private": true,
-  "description": "Read GitHub pull-request reports in BB.",
+  "description": "Read GitHub pull-request reports in bb.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs && bb plugin build",
@@ -22,7 +22,7 @@
   },
   "bb": {
     "name": "Brocante",
-    "description": "Read GitHub pull-request reports without leaving BB.",
+    "description": "Read GitHub pull-request reports without leaving bb.",
     "branding": {
       "icon": "./assets/icon.svg"
     },
