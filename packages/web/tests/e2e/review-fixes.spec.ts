@@ -203,7 +203,7 @@ test('reserved repository paths render the marketplace without starting OAuth', 
   ).toBeVisible();
   await expect(
     page.locator('.empty-state').getByRole('link', { name: 'Sign in with GitHub' }),
-  ).toHaveAttribute('href', '/auth/login');
+  ).toHaveAttribute('href', '/auth/login?returnTo=%2Fr%2Fauth%2Flogin');
   await expect(page.getByRole('link', { name: 'auth/login', exact: true })).toHaveAttribute(
     'href',
     'https://github.com/auth/login',

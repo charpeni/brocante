@@ -2,10 +2,14 @@ name: Check
 on: [push, pull_request]
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   check:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -40,3 +44,12 @@ jobs:
         run: pnpm --filter @brocante/web exec playwright install --with-deps chromium
       - name: Run ${{ matrix.name }}
         run: ${{ matrix.command }}
+      - name: Upload E2E failure artifacts
+        if: failure() && matrix.name == 'E2E tests'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-${{ github.run_attempt }}
+          path: |
+            packages/web/playwright-report/
+            packages/web/test-results/
+          retention-days: 7
