@@ -1,8 +1,16 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import type { BbPluginApi, PluginCliRegistration } from '@get-bb/plugin-sdk';
 import plugin from './server';
+import { resolveGitHubToken } from './github-auth';
 
-afterEach(() => vi.unstubAllGlobals());
+vi.mock('./github-auth', () => ({
+  resolveGitHubToken: vi.fn(async (override?: string) => override ?? ''),
+}));
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.mocked(resolveGitHubToken).mockClear();
+});
 
 function registration(token?: string) {
   let cli: PluginCliRegistration | undefined;
@@ -11,6 +19,7 @@ function registration(token?: string) {
   plugin({
     settings: { define: () => ({ get: async () => ({ githubToken: token }) }) },
     http: { route: () => {} },
+    rpc: { register: () => {} },
     cli: {
       register: (value: PluginCliRegistration) => {
         cli = value;
@@ -26,7 +35,22 @@ it('offers help without a configured token and rejects missing credentials', asy
   expect((await cli.run(['report', '--help'], context)).exitCode).toBe(0);
   const result = await cli.run(['report', 'team/repo'], context);
   expect(result.exitCode).not.toBe(0);
-  expect(result.stderr).toContain('Configure a GitHub token');
+  expect(result.stderr).toContain('gh auth login on the bb server');
+});
+
+it('captures with the existing gh credential and never returns it to the client', async () => {
+  vi.mocked(resolveGitHubToken).mockResolvedValueOnce('existing-gh-secret');
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('', { status: 401 }));
+  vi.stubGlobal('fetch', fetcher);
+  const result = await registration().run(['report', 'team/repo', '--format', 'json'], {
+    signal: new AbortController().signal,
+  });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher.mock.calls[0][1]?.headers).toMatchObject({
+    Authorization: 'Bearer existing-gh-secret',
+  });
+  expect(result.stderr).toContain('Sign in again with gh auth login');
+  expect(JSON.stringify(result)).not.toContain('existing-gh-secret');
 });
 
 it('enforces shared rate-limit cooldown without exposing the credential', async () => {

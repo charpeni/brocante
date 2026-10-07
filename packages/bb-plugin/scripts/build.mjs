@@ -10,6 +10,8 @@ const result = await build({
   platform: 'node',
   format: 'esm',
   target: 'node22',
+  minify: true,
+  legalComments: 'eof',
   external: ['@get-bb/plugin-sdk'],
   write: false,
 });

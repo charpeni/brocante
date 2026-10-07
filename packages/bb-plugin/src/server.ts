@@ -1,13 +1,20 @@
 import { cliCommand, defineCli, PluginCliError, type BbPluginApi } from '@get-bb/plugin-sdk';
-import { generateReport, renderReport, GitHubError } from '../../core/src/index';
+import { generateReport, renderReport, GitHubError, type Report } from '../../core/src/index';
 import { demoMarket } from '../../core/src/demo';
 import { reportFromSnapshot } from '../../core/src/report';
 import { renderSnapshot } from '../../snapshot/src/index';
 import { randomUUID } from 'node:crypto';
+import { rpcContract, type SavedMarket } from './contract';
+import { resolveGitHubToken } from './github-auth';
 
 export default function plugin(bb: BbPluginApi) {
   const settings = bb.settings.define({
-    githubToken: { type: 'string', label: 'GitHub read-only token', secret: true },
+    githubToken: {
+      type: 'string',
+      label: 'GitHub token override (optional)',
+      description: 'Uses the bb server’s existing gh login when left empty.',
+      secret: true,
+    },
   });
   let retryAt = 0;
   const snapshots = () => {
@@ -17,29 +24,115 @@ export default function plugin(bb: BbPluginApi) {
     ]);
     return db;
   };
-  bb.http.route(
-    'GET',
-    '/snapshot',
-    (context) => {
-      const id = context.req.query('id');
-      if (!id || !/^[a-f0-9-]{36}$/.test(id))
-        return new Response('Snapshot not found.', { status: 404 });
-      const snapshot = snapshots()
-        .prepare('SELECT repository, html FROM snapshots WHERE id = ?')
-        .get(id) as { repository: string; html: string } | undefined;
-      if (!snapshot) return new Response('Snapshot not found.', { status: 404 });
-      return new Response(snapshot.html, {
-        headers: {
+  function saveSnapshot(report: Report): SavedMarket {
+    const market = { id: randomUUID(), repository: report.repository, createdAt: Date.now() };
+    const db = snapshots();
+    db.prepare('INSERT INTO snapshots (id, repository, html, created_at) VALUES (?, ?, ?, ?)').run(
+      market.id,
+      market.repository,
+      renderSnapshot(report),
+      market.createdAt,
+    );
+    db.prepare(
+      'DELETE FROM snapshots WHERE id NOT IN (SELECT id FROM snapshots ORDER BY created_at DESC, rowid DESC LIMIT 10)',
+    ).run();
+    bb.realtime.publish('snapshots', { id: market.id });
+    return market;
+  }
+
+  async function loadReport(input: {
+    repository?: string;
+    search?: string;
+    maxPages: number;
+    demo: boolean;
+  }): Promise<Report> {
+    const githubToken = input.demo
+      ? ''
+      : await resolveGitHubToken((await settings.get()).githubToken);
+    if (!githubToken && !input.demo)
+      throw new PluginCliError(
+        'Run gh auth login on the bb server, or set Brocante’s optional GitHub token override.',
+        {
+          code: 'missing_token',
+        },
+      );
+    if (!input.demo && Date.now() < retryAt)
+      throw new PluginCliError(
+        `GitHub is rate limited. Retry after ${Math.ceil((retryAt - Date.now()) / 1000)} seconds.`,
+        { code: 'rate_limited' },
+      );
+    try {
+      if (input.demo && (input.repository || input.search))
+        throw new Error('Use --demo without a repository or search.');
+      return input.demo
+        ? { ...reportFromSnapshot(demoMarket()), demo: true as const }
+        : await generateReport({
+            repository: input.repository ?? '',
+            token: githubToken!,
+            search: input.search,
+            maxPages: input.maxPages,
+          });
+    } catch (error) {
+      if (error instanceof GitHubError && error.status === 429)
+        retryAt = Date.now() + (error.retryAfter ?? 60) * 1000;
+      const message =
+        error instanceof GitHubError
+          ? `${error.status === 401 ? 'GitHub rejected the credential. Sign in again with gh auth login or update the token override.' : error.message}${error.retryAfter ? ` Retry after ${error.retryAfter} seconds.` : ''}`
+          : error instanceof TypeError
+            ? 'Unable to reach GitHub. Please retry.'
+            : error instanceof Error
+              ? error.message
+              : 'Report generation failed.';
+      throw new PluginCliError(message, {
+        code:
+          error instanceof GitHubError && error.status === 429 ? 'rate_limited' : 'report_failed',
+      });
+    }
+  }
+
+  for (const path of ['/snapshot', '/preview']) {
+    bb.http.route(
+      'GET',
+      path,
+      (context) => {
+        const id = context.req.query('id');
+        if (!id || !/^[a-f0-9-]{36}$/.test(id))
+          return new Response('Snapshot not found.', { status: 404 });
+        const snapshot = snapshots()
+          .prepare('SELECT repository, html FROM snapshots WHERE id = ?')
+          .get(id) as { repository: string; html: string } | undefined;
+        if (!snapshot) return new Response('Snapshot not found.', { status: 404 });
+        const headers: Record<string, string> = {
           'Content-Type': 'text/html; charset=utf-8',
-          'Content-Disposition': `attachment; filename="brocante-${snapshot.repository.replace('/', '-')}.html"`,
           'Cache-Control': 'no-store',
           'X-Content-Type-Options': 'nosniff',
-          'Content-Security-Policy': 'sandbox allow-scripts allow-popups',
-        },
-      });
+          'Content-Security-Policy':
+            "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox; frame-ancestors 'self'",
+        };
+        if (path === '/snapshot')
+          headers['Content-Disposition'] =
+            `attachment; filename="brocante-${snapshot.repository.replace('/', '-')}.html"`;
+        return new Response(snapshot.html, { headers });
+      },
+      { auth: 'local' },
+    );
+  }
+  bb.rpc.register(rpcContract, {
+    async listSnapshots() {
+      const githubToken = await resolveGitHubToken((await settings.get()).githubToken);
+      return {
+        configured: !!githubToken,
+        snapshots: snapshots()
+          .prepare(
+            'SELECT id, repository, created_at AS createdAt FROM snapshots ORDER BY created_at DESC, rowid DESC LIMIT 10',
+          )
+          .all() as SavedMarket[],
+      };
     },
-    { auth: 'local' },
-  );
+    async capture(input) {
+      return saveSnapshot(await loadReport(input));
+    },
+  });
   bb.cli.register(
     defineCli({
       name: 'brocante',
@@ -67,41 +160,18 @@ export default function plugin(bb: BbPluginApi) {
             demo: { type: 'boolean', description: 'Save a fictional market without credentials' },
           },
           async run(input) {
-            const { githubToken } = await settings.get();
-            if (!githubToken && !input.options.demo)
-              throw new PluginCliError(
-                'Configure a GitHub token in the Brocante plugin settings.',
-                { code: 'missing_token' },
-              );
-            if (!input.options.demo && Date.now() < retryAt)
-              throw new PluginCliError(
-                `GitHub is rate limited. Retry after ${Math.ceil((retryAt - Date.now()) / 1000)} seconds.`,
-                { code: 'rate_limited' },
-              );
             try {
               const maxPages = Number(input.options['max-pages']);
               if (!/^\d+$/.test(input.options['max-pages']) || maxPages < 1 || maxPages > 100)
                 throw new Error('--max-pages must be an integer from 1 to 100.');
-              if (input.options.demo && (input.positionals.repository || input.options.search))
-                throw new Error('Use --demo without a repository or search.');
-              const report = input.options.demo
-                ? { ...reportFromSnapshot(demoMarket()), demo: true as const }
-                : await generateReport({
-                    repository: input.positionals.repository ?? '',
-                    token: githubToken!,
-                    search: input.options.search,
-                    // Bound text output; HTML is stored separately and never sent through CLI stdout.
-                    maxPages: input.options.format === 'html' ? maxPages : 1,
-                  });
+              const report = await loadReport({
+                repository: input.positionals.repository,
+                search: input.options.search,
+                maxPages: input.options.format === 'html' ? maxPages : 1,
+                demo: !!input.options.demo,
+              });
               if (input.options.format === 'html') {
-                const id = randomUUID();
-                const db = snapshots();
-                db.prepare(
-                  'INSERT INTO snapshots (id, repository, html, created_at) VALUES (?, ?, ?, ?)',
-                ).run(id, report.repository, renderSnapshot(report), Date.now());
-                db.prepare(
-                  'DELETE FROM snapshots WHERE id NOT IN (SELECT id FROM snapshots ORDER BY created_at DESC, rowid DESC LIMIT 10)',
-                ).run();
+                const { id } = saveSnapshot(report);
                 const path = `/api/v1/plugins/${encodeURIComponent(bb.pluginId)}/http/snapshot?id=${id}`;
                 const url = new URL(
                   path,
@@ -109,7 +179,7 @@ export default function plugin(bb: BbPluginApi) {
                 ).href;
                 return {
                   exitCode: 0,
-                  stdout: `Portable 3D market: ${url}\nDownload the HTML and open it in your browser.\n${report.complete ? '' : 'Partial snapshot: increase --max-pages or narrow --search for more results.\n'}`,
+                  stdout: `Preview in bb: ${new URL(`/plugins/${encodeURIComponent(bb.pluginId)}/market/${id}`, url).href}\nPortable 3D market: ${url}\nDownload the HTML to keep an offline copy.\n${report.complete ? '' : 'Partial snapshot: increase --max-pages or narrow --search for more results.\n'}`,
                 };
               }
               report.pullRequests = report.pullRequests.map((pr) => ({
@@ -125,22 +195,13 @@ export default function plugin(bb: BbPluginApi) {
                 }),
               };
             } catch (error) {
-              if (error instanceof GitHubError && error.status === 429)
-                retryAt = Date.now() + (error.retryAfter ?? 60) * 1000;
-              const message =
-                error instanceof GitHubError
-                  ? `${error.status === 401 ? 'GitHub rejected the configured token.' : error.message}${error.retryAfter ? ` Retry after ${error.retryAfter} seconds.` : ''}`
-                  : error instanceof TypeError
-                    ? 'Unable to reach GitHub. Please retry.'
-                    : error instanceof Error
-                      ? error.message
-                      : 'Report generation failed.';
-              throw new PluginCliError(message, {
-                code:
-                  error instanceof GitHubError && error.status === 429
-                    ? 'rate_limited'
-                    : 'report_failed',
-              });
+              if (error instanceof PluginCliError) throw error;
+              throw new PluginCliError(
+                error instanceof Error ? error.message : 'Report generation failed.',
+                {
+                  code: 'report_failed',
+                },
+              );
             }
           },
         }),
