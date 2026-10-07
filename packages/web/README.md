@@ -80,19 +80,37 @@ use their own token.
 
 ## Deploy to Cloudflare
 
-Run from `packages/web`. Hosted builds should install dependencies from the repository root with
-`pnpm install --frozen-lockfile`, then run `pnpm build:web`.
+In Cloudflare, add `brocante.dev` as an active domain, then go to **Workers & Pages → Create
+application → Import repository** and connect `charpeni/brocante`.
 
-1. Run `pnpm exec wrangler login` or configure a scoped CI API token.
-2. Set the Worker name, account, production HTTPS `APP_URL`, and GitHub App client ID/slug in
-   `wrangler.jsonc`. Register the same origin plus `/auth/callback` with GitHub.
-3. Run `pnpm deploy` to create the Worker. It initially serves the demo with sign-in disabled.
-4. Set `GITHUB_CLIENT_SECRET` and a separate production `SESSION_KEY` through
-   `pnpm exec wrangler secret put <NAME>`. Optionally set `GITHUB_PUBLIC_TOKEN` the same way.
-5. Verify access to public and private repositories, including a user who lacks access to the private
-   repository. Update `APP_URL` and the callback together when adding a custom domain.
+| Build setting     | Value                                                                        |
+| ----------------- | ---------------------------------------------------------------------------- |
+| Worker name       | `brocante`                                                                   |
+| Production branch | `main`                                                                       |
+| Root directory    | Repository root (`/`)                                                        |
+| Build command     | `pnpm install --frozen-lockfile && CLOUDFLARE_ENV=production pnpm build:web` |
+| Deploy command    | `pnpm --filter @brocante/web exec wrangler deploy --env production`          |
+| Build variables   | `NODE_VERSION=24`, `PNPM_VERSION=12.8.1`                                     |
 
-The application uses GitHub as its persistent data source and requires no database or storage bindings.
+The production environment sets `APP_URL=https://brocante.dev` and attaches the custom domain.
+Local development keeps its localhost configuration.
+
+Create a production GitHub App using the permissions above and callback
+`https://brocante.dev/auth/callback`. In the Worker's **Settings → Variables & Secrets**, add
+`GITHUB_CLIENT_ID` and `GITHUB_APP_SLUG` as plain-text variables, and `GITHUB_CLIENT_SECRET` and
+`SESSION_KEY` as secrets. Generate a separate production key with `openssl rand -base64 32`.
+Optionally add `GITHUB_PUBLIC_TOKEN` as a secret for public browsing without sign-in. These are
+runtime settings; putting them in build variables does not configure the running app.
+
+Save and deploy the runtime settings, then verify demo loading, sign-in, sign-out, and repository
+access. Deployments preserve dashboard variables. The app requires no database or storage bindings.
+
+For a manual production deployment from the repository root, log in with Wrangler, then run:
+
+```sh
+CLOUDFLARE_ENV=production pnpm build:web
+pnpm --filter @brocante/web exec wrangler deploy --env production
+```
 
 ## Behavior and privacy
 

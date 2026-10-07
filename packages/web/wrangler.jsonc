@@ -11,4 +11,12 @@
     "GITHUB_APP_SLUG": "",
   },
   "observability": { "enabled": false },
+  "keep_vars": true,
+  "env": {
+    "production": {
+      "name": "brocante",
+      "vars": { "APP_URL": "https://brocante.dev" },
+      "routes": [{ "pattern": "brocante.dev", "custom_domain": true }],
+    },
+  },
 }
