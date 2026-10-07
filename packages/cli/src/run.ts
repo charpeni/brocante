@@ -14,21 +14,22 @@ import {
   type ReportFormat,
 } from '@brocante/core';
 import { demoMarket } from '@brocante/core/demo';
+import { renderSnapshot } from '@brocante/snapshot';
 
 const optionsHelp = [
-  ['--format <html|markdown|json>', 'Report format (default: html)'],
+  ['--format <html|markdown|json>', '3D snapshot or text export (default: html)'],
   ['--output <path|->', 'File path, or - for stdout'],
   ['--search <query>', "GitHub search within this repository's open PRs"],
   ['--max-pages <1-100>', 'Page limit, 60 PRs per page (default: 10)'],
   ['--force', 'Replace an existing output file'],
-  ['--demo', 'Generate a fictional report without credentials'],
+  ['--demo', 'Explore a fictional market without credentials'],
   ['--help', 'Show help'],
   ['--version', 'Show version'],
 ]
   .map(([option, description]) => `  ${option.padEnd(30)}${description}`)
   .join('\n');
 
-const help = `Brocante ${version} — local pull-request reports
+const help = `Brocante ${version} — a local 3D marketplace for pull requests
 
 Usage: brocante [report] <owner/repo> [options]
        brocante --demo [options]
@@ -37,7 +38,8 @@ ${optionsHelp}
 
 Authentication: GH_TOKEN, then GITHUB_TOKEN, then gh auth token.
 HTML defaults to brocante-owner-repo.html; Markdown and JSON default to stdout.
-Reports are snapshots. A rate limit stops the run and reports the retry delay.
+HTML is a portable 3D snapshot with no server or external assets.
+A rate limit stops the run and reports the retry delay.
 `;
 
 interface CliIO {
@@ -168,7 +170,7 @@ export async function runCli(argv: string[], overrides: Partial<CliIO> = {}): Pr
           fetcher: io.fetcher,
         });
 
-    const content = renderReport(report, format);
+    const content = format === 'html' ? renderSnapshot(report) : renderReport(report, format);
     if (!path) io.stdout(content);
     else {
       // Reports can contain private repository data; don't overwrite by default.

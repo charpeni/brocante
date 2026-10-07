@@ -52,6 +52,7 @@ jobs:
           test -f "$RUNNER_TEMP/brocante-smoke/node_modules/brocante/LICENSE"
           test "$("$RUNNER_TEMP/brocante-smoke/node_modules/.bin/brocante" --version)" = "$VERSION"
           "$RUNNER_TEMP/brocante-smoke/node_modules/.bin/brocante" --demo --format json --output "$RUNNER_TEMP/brocante-smoke/demo.json"
+          "$RUNNER_TEMP/brocante-smoke/node_modules/.bin/brocante" --demo --output "$RUNNER_TEMP/brocante-smoke/demo.html"
       - name: Publish with OIDC and provenance
         env:
           VERSION: ${{ steps.release.outputs.version }}

@@ -1,6 +1,7 @@
 # Brocante for bb
 
-Read GitHub pull-request reports in bb. Requires bb 0.45 or newer with Plugin SDK 0.6.15 (the 0.6 series).
+Save portable 3D pull-request markets from bb, using the same marketplace as the hosted app.
+No GitHub App required. Requires bb 0.45 or newer with Plugin SDK 0.6.15 (the 0.6 series).
 
 ## Install and use
 
@@ -16,15 +17,21 @@ bb stores the token on its server; the plugin uses it instead of local GitHub CL
 
 ```sh
 bb brocante report withastro/astro
+bb brocante report --demo
 bb brocante report withastro/astro --search 'label:bug' --format json
 ```
 
-Each command returns up to 60 open PRs as Markdown or JSON, with available repository-wide historical
-counts and a notice when pagination is incomplete. Descriptions are omitted. Use the
-[CLI](../cli/README.md) for larger reports or local HTML files.
+The default command returns a download link. Save the HTML and open it in your browser: its 3D scene,
+filters, PR details, and list view work offline. Credentials stay on the bb server. Snapshots may contain
+private repository data, so share them carefully. Description images remain external links.
 
-Commands run on the bb server and return text. Read failures stop the command; rate limits block
-further requests until the reported retry time. The plugin has no background polling or persistent cache.
+HTML captures up to ten pages of 60 PRs; use `--max-pages` (1–100) or `--search` to change coverage.
+Markdown and JSON exports return one page, omit descriptions, and flag incomplete results.
+Search within the saved HTML covers captured PRs; generate another snapshot to refresh them.
+
+The plugin retains the ten most recent downloads in its own storage. Downloaded files work independently
+of bb. Downloads use bb’s local authentication. Read failures stop the command; rate limits block requests
+until the reported retry time. The plugin does not poll GitHub in the background.
 
 ## Git releases
 

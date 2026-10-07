@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@brocante/core": "workspace:*",
+    "@brocante/snapshot": "workspace:*",
     "esbuild": "^0.28.1"
   },
   "engines": {

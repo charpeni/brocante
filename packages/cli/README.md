@@ -1,6 +1,7 @@
 # Brocante CLI
 
-Generate local HTML, Markdown, and JSON reports of a GitHub repository’s open pull requests.
+Save a portable 3D snapshot of your repository’s open pull requests, using the same marketplace
+as the hosted app. No GitHub App or local server required. Markdown and JSON exports are also available.
 Requires Node.js 22.12 or newer.
 
 ```sh
@@ -15,16 +16,19 @@ brocante --demo --output demo.html
 
 The CLI checks `GH_TOKEN`, then `GITHUB_TOKEN`, then `gh auth token`. Run `gh auth login` or provide a
 read-only token in your environment. GitHub requires authentication for public repositories too.
-Reports contain no tokens, but may contain private repository data.
+Snapshots contain no tokens, but may contain private repository data.
 
 ## Output and limits
 
-HTML defaults to `brocante-owner-repo.html` and opens in a browser without a server or external assets.
+HTML defaults to `brocante-owner-repo.html`. Open the file in your browser: the 3D scene, fonts,
+filters, PR details, and list view work offline, without a server or external assets.
+Search and pagination cover the captured PRs. Generate a new snapshot to refresh the data;
+description images remain links to their original hosts.
 Markdown and JSON print to stdout unless `--output` is supplied. Use `--output -` to print HTML and
 `--force` to overwrite an existing file. New files use owner-only permissions where supported.
 
-Reports include a PR table and available 30-day historical counts. JSON also includes descriptions,
-capped at 6,000 characters with a `bodyTruncated` flag. The interactive marketplace is in the web app.
+Text exports include PR summaries and available 30-day historical counts. JSON includes descriptions,
+capped at 6,000 characters with a `bodyTruncated` flag. HTML includes these descriptions in PR details.
 
 The default limit is ten pages of 60 PRs. Set `--max-pages` from 1 to 100 to change it. Capped reports
 are marked partial; GitHub search returns at most 1,000 matches. Historical counts may lag activity.
@@ -44,8 +48,8 @@ node packages/cli/dist/cli.js --demo --output /tmp/brocante.html
 pnpm --filter brocante pack --pack-destination /tmp
 ```
 
-Packing builds the CLI first. The npm package contains the bundled CLI, license, and this README,
-with no workspace runtime dependencies.
+Packing builds the shared marketplace and bundles it into the CLI. The npm package contains the
+bundled CLI, license, and this README, with no workspace runtime dependencies.
 
 ## Releases
 

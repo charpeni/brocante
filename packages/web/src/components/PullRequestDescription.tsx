@@ -65,16 +65,35 @@ export default function PullRequestDescription({
   body,
   url,
   truncated,
+  offline = false,
 }: {
   body: string;
   url?: string;
   truncated?: boolean;
+  offline?: boolean;
 }) {
   return (
     <div className="pr-body">
       <Markdown
         remarkPlugins={[remarkGfm]}
-        components={components}
+        components={
+          offline
+            ? {
+                ...components,
+                img: ({ src, alt }) => (
+                  <span className="description-image">
+                    <span>{alt}</span>
+                    {src && (
+                      <a href={src} target="_blank" rel="noopener noreferrer">
+                        Open image ↗
+                      </a>
+                    )}
+                    <small>Images are not included in this snapshot.</small>
+                  </span>
+                ),
+              }
+            : components
+        }
         skipHtml
         urlTransform={(value, key) => {
           const safe = defaultUrlTransform(value);

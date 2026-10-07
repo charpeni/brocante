@@ -1,5 +1,6 @@
 import { build } from 'esbuild';
 import { readFile, writeFile } from 'node:fs/promises';
+import '../../snapshot/scripts/build.mjs';
 
 // Bundle the private workspace core; installed plugins need no sibling packages.
 const result = await build({

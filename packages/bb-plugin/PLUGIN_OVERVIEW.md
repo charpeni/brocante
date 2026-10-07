@@ -1,13 +1,14 @@
-Browse a repository's open pull requests and recent activity from a bb terminal or agent thread.
+# Brocante
 
-## What you get
+Turn a repository’s open pull requests into a portable 3D flea market, using the same scene and UI
+as the hosted Brocante app. Explore shops, filter reviews, and read PR details locally.
 
-`bb brocante report owner/repository` returns a Markdown report with PR titles, authors, review states, change sizes, and available opened/merged counts for the last 30 days compared with the previous 30. Use `--format json` for structured output or `--search` for GitHub qualifiers within the repository's open PRs.
+Run `bb brocante report owner/repo`, download the HTML, and open it in your browser. The file works
+offline without a GitHub App or server. Set a read-only GitHub token in the plugin’s secret settings
+to capture live data, or use `bb brocante report --demo` without credentials.
 
-## How it works
+`--search` and `--max-pages` control the capture. Markdown and JSON exports are available with
+`--format`; those text exports return up to 60 PRs and omit descriptions.
 
-Each request reads up to 60 PRs from GitHub. Reports identify when more results remain; descriptions are omitted to keep output bounded. There is no background polling, persistent report cache, or write to GitHub. Rate limits stop requests until GitHub's retry deadline.
-
-## Requirements
-
-Install from this repository’s package-scoped `bb-plugin/` Git tags. The plugin is not published on npm. Requires bb 0.45 or newer and a GitHub read-only token configured in the plugin's secret settings. Requests run on the bb server using that token's access. The separate Brocante CLI can generate larger local HTML reports.
+The plugin retains its ten most recent downloads. Saved files contain no tokens but may contain
+private repository data. Snapshots remain unchanged until you generate a new one.

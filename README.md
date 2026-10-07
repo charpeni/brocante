@@ -27,11 +27,12 @@ Open http://localhost:4321. The demo works without credentials. To connect GitHu
 | ----------------------------------------- | ---------------------------------------------------------------- |
 | [Web](packages/web/README.md)             | Astro, React, and Three.js app deployed to Cloudflare Workers    |
 | [Core](packages/core/README.md)           | Shared GitHub access, search, shop states, and report generation |
-| [CLI](packages/cli/README.md)             | Local HTML, Markdown, and JSON reports                           |
-| [bb plugin](packages/bb-plugin/README.md) | Pull-request reports in bb                                       |
+| [CLI](packages/cli/README.md)             | Portable 3D markets, plus Markdown and JSON exports              |
+| [bb plugin](packages/bb-plugin/README.md) | Portable 3D markets from bb                                      |
+| [Snapshot](packages/snapshot/README.md)   | Shared, self-contained build of the web marketplace              |
 
-The CLI bundles core for npm distribution. The private bb plugin bundles core for Git distribution;
-the web and core packages are private.
+The CLI and bb plugin bundle the shared marketplace and core. Their snapshots open locally without
+a GitHub App or server; GitHub credentials are needed only to capture repository data.
 
 ## Development
 

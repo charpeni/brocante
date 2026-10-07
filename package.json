@@ -9,14 +9,15 @@
     "build:web": "pnpm --filter @brocante/web build",
     "build:cli": "pnpm --filter brocante build",
     "build:plugin": "pnpm --filter bb-plugin-brocante build",
+    "build:snapshot": "pnpm --filter @brocante/snapshot build",
     "preview": "pnpm --filter @brocante/web preview",
     "deploy": "pnpm --filter @brocante/web deploy",
     "check": "pnpm -r --if-present check",
     "lint": "oxlint --deny-warnings",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
-    "test": "vitest run",
-    "test:e2e": "pnpm --filter @brocante/web test:e2e",
+    "test": "pnpm build:snapshot && vitest run",
+    "test:e2e": "pnpm build:snapshot && pnpm --filter @brocante/web test:e2e",
     "validate": "pnpm lint && pnpm format:check && pnpm check && pnpm test && pnpm build"
   },
   "devDependencies": {

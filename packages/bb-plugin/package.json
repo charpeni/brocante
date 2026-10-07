@@ -2,7 +2,7 @@
   "name": "bb-plugin-brocante",
   "version": "1.0.0",
   "private": true,
-  "description": "Read GitHub pull-request reports in bb.",
+  "description": "Save portable 3D pull-request markets from bb.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs && bb plugin build",
@@ -14,6 +14,7 @@
   "devDependencies": {
     "@get-bb/plugin-sdk": "0.6.15",
     "bb-app": "0.45.0",
+    "cron-parser": "^5.10.1",
     "esbuild": "^0.28.1"
   },
   "engines": {
@@ -22,7 +23,7 @@
   },
   "bb": {
     "name": "Brocante",
-    "description": "Read GitHub pull-request reports without leaving bb.",
+    "description": "Save portable snapshots of Brocante’s 3D pull-request marketplace.",
     "branding": {
       "icon": "./assets/icon.svg"
     },

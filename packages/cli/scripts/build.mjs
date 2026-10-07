@@ -1,5 +1,6 @@
 import { build } from 'esbuild';
 import { chmod } from 'node:fs/promises';
+import '../../snapshot/scripts/build.mjs';
 
 await build({
   entryPoints: ['src/cli.ts'],

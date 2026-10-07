@@ -10,6 +10,7 @@ function registration(token?: string) {
   // uses no storage, events, background services, or filesystem facilities.
   plugin({
     settings: { define: () => ({ get: async () => ({ githubToken: token }) }) },
+    http: { route: () => {} },
     cli: {
       register: (value: PluginCliRegistration) => {
         cli = value;

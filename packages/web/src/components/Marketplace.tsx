@@ -76,6 +76,8 @@ interface Session {
 interface MarketplaceProps {
   initialLocation: { repository: string; search: string };
   initialAuthError: string | null;
+  logoSrc?: string;
+  savedSnapshot?: { data: MarketData; complete: boolean; search: string; demo?: true };
 }
 
 // Keep the server render and first hydration render identical; demo dates and WebGL
@@ -84,7 +86,8 @@ const subscribeToHydration = () => () => {};
 
 const rejectedSearch = (error: unknown) => error instanceof ApiError && error.status === 400;
 
-function App({ initialLocation, initialAuthError }: MarketplaceProps) {
+function App({ initialLocation, initialAuthError, savedSnapshot, logoSrc }: MarketplaceProps) {
+  const offline = !!savedSnapshot;
   const hydrated = useSyncExternalStore(
     subscribeToHydration,
     () => true,
@@ -124,6 +127,10 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
     staleTime: 60_000,
     refetchOnWindowFocus: api.canRequest,
     refetchOnReconnect: api.canRequest,
+    enabled: !offline,
+    initialData: offline
+      ? { configured: false, publicAccess: true, login: null, installUrl: null }
+      : undefined,
   });
   const access = session.data?.login
     ? `user:${session.data.login}`
@@ -147,7 +154,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
         throw error;
       }
     },
-    enabled: !!repository && canBrowse,
+    enabled: !offline && !!repository && canBrowse,
     retry: false,
     gcTime: 0,
     staleTime: 30_000,
@@ -175,7 +182,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
   const denied =
     live.data === null ||
     (live.error instanceof ApiError && [401, 403].includes(live.error.status));
-  const canRetain = canBrowse && !!repository && !denied;
+  const canRetain = !offline && canBrowse && !!repository && !denied;
   if (snapshot && (!canRetain || snapshot.identity !== identity)) setSnapshot(null);
   if (
     canRetain &&
@@ -186,15 +193,31 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
       snapshot.page !== page)
   )
     setSnapshot({ identity, data: live.data, search, page });
-  const data = repository
-    ? canRetain
-      ? (live.data ?? (snapshot?.identity === identity ? snapshot.data : undefined))
-      : undefined
-    : hydrated
-      ? demo
-      : undefined;
+  const savedPage = useMemo(() => {
+    if (!savedSnapshot) return undefined;
+    const matches = savedSnapshot.data.pullRequests.filter((pr) =>
+      `${pr.title} ${pr.author} ${pr.number} ${pr.labels.join(' ')}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+    );
+    return {
+      ...savedSnapshot.data,
+      total: search ? matches.length : savedSnapshot.data.total,
+      pullRequests: matches.slice(page * 60, (page + 1) * 60),
+      nextCursor: (page + 1) * 60 < matches.length ? String(page + 1) : null,
+    };
+  }, [savedSnapshot, search, page]);
+  const data =
+    savedPage ??
+    (repository
+      ? canRetain
+        ? (live.data ?? (snapshot?.identity === identity ? snapshot.data : undefined))
+        : undefined
+      : hydrated
+        ? demo
+        : undefined);
   const hasData = !!data;
-  const showingPrevious = !!repository && !!data && !live.data;
+  const showingPrevious = !offline && !!repository && !!data && !live.data;
   const signInUrl = signInPath(repository, search);
   // Each new deadline mounts a fresh clock, including the very first label.
   const retryLabel = waiting ? <RetryCountdown key={retryAt} retryAt={retryAt} /> : 'Try again';
@@ -314,7 +337,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
     setSearch('');
     setSearchInput('');
     setFilter('all');
-    window.history.pushState(null, '', marketPath(value));
+    if (!offline) window.history.pushState(null, '', marketPath(value));
     cache.removeQueries({ queryKey: ['market'], type: 'inactive' });
   }
 
@@ -330,7 +353,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
   }
 
   function runSearch(value: string) {
-    if (repository && (waiting || !canBrowse)) return;
+    if (!offline && repository && (waiting || !canBrowse)) return;
     const query = value.trim();
     setSearchOptions(false);
     if (document.activeElement?.closest('.quick-searches'))
@@ -342,11 +365,12 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
     setCursors([null]);
     setFilter('all');
     const path = marketPath(repository, query);
-    if (path !== window.location.pathname + window.location.search)
+    if (!offline && path !== window.location.pathname + window.location.search)
       window.history.pushState(null, '', path);
   }
 
   useEffect(() => {
+    if (offline) return;
     const navigate = () => {
       const location = marketLocation(new URL(window.location.href));
       setRepository(location.repository);
@@ -361,15 +385,17 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
     };
     window.addEventListener('popstate', navigate);
     return () => window.removeEventListener('popstate', navigate);
-  }, []);
+  }, [offline]);
   useEffect(() => {
     document.title = repository
       ? `${repository} · Brocante`
       : 'Brocante — a marketplace for pull requests';
   }, [repository]);
-  const authError = hydrated
-    ? new URLSearchParams(window.location.search).get('auth_error')
-    : initialAuthError;
+  const authError = offline
+    ? null
+    : hydrated
+      ? new URLSearchParams(window.location.search).get('auth_error')
+      : initialAuthError;
   const filters: ['all' | 'open' | ShopState, string][] = [
     ['all', 'The whole market'],
     ['open', 'Open for a review'],
@@ -384,8 +410,13 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
       </a>
       <header className="topbar">
         <div className="brand-cluster">
-          <a href="/" className="brand" aria-label="Brocante home">
-            <img src="/brand/brocante-logo.svg" width="206" height="42" alt="Brocante" />
+          <a href={offline ? '#' : '/'} className="brand" aria-label="Brocante home">
+            <img
+              src={logoSrc ?? '/brand/brocante-logo.svg'}
+              width="206"
+              height="42"
+              alt="Brocante"
+            />
           </a>
           <BrocanteDefinition />
         </div>
@@ -426,17 +457,23 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
             )}
             <span>
               {data?.isPrivate ? 'Private · ' : ''}
-              {repository ? 'Live from GitHub' : 'A fictional weekend bazaar'}
+              {offline && repository
+                ? 'Saved from GitHub'
+                : repository
+                  ? 'Live from GitHub'
+                  : 'A fictional weekend bazaar'}
             </span>
           </div>
-          <button
-            className="change-repository"
-            aria-expanded={editingRepository}
-            aria-controls="repository-editor"
-            onClick={() => setEditingRepository(!editingRepository)}
-          >
-            Change repository
-          </button>
+          {!offline && (
+            <button
+              className="change-repository"
+              aria-expanded={editingRepository}
+              aria-controls="repository-editor"
+              onClick={() => setEditingRepository(!editingRepository)}
+            >
+              Change repository
+            </button>
+          )}
           <fieldset className="view-switch" aria-label="View">
             <button aria-pressed={view === 'market'} onClick={() => setView('market')}>
               <span aria-hidden="true">◇</span> Market
@@ -447,7 +484,9 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
           </fieldset>
         </div>
         <div className="top-actions">
-          {session.data?.login || session.error ? (
+          {offline ? (
+            <span className="public-access-label">Local snapshot</span>
+          ) : session.data?.login || session.error ? (
             <>
               {session.data?.login && <span className="login-name">@{session.data.login}</span>}
               <form method="post" action="/auth/logout">
@@ -488,40 +527,52 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
             id="repository-editor"
             className={`repository-editor ${editingRepository ? 'is-editing' : ''}`}
           >
-            <form onSubmit={submit} className="repo-form">
-              <label htmlFor="repository">Your repository</label>
-              <div className="input-group">
-                <input
-                  id="repository"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="owner / repository"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                <button type="submit" aria-label="Open repository">
-                  ↗
-                </button>
-              </div>
-              {inputError && (
-                <p className="error-text" role="alert">
-                  {inputError}
+            {offline ? (
+              <div className="repo-caption">
+                Saved {new Date(savedSnapshot.data.fetchedAt).toLocaleString()}.
+                {savedSnapshot.search && <p>Captured with: {savedSnapshot.search}</p>}
+                <p>
+                  Explore this snapshot offline. Generate a new one to update its pull requests.
                 </p>
-              )}
-            </form>
-            <div className="repo-caption">
-              {session.data?.publicAccess &&
-                'Public repositories are available without signing in. '}
-              Private repositories need a GitHub App installation and your access.
-              {session.data?.installUrl && (
-                <>
-                  {' '}
-                  <a href={session.data.installUrl} target="_blank" rel="noreferrer">
-                    Connect repositories ↗
-                  </a>
-                </>
-              )}
-            </div>
+              </div>
+            ) : (
+              <>
+                <form onSubmit={submit} className="repo-form">
+                  <label htmlFor="repository">Your repository</label>
+                  <div className="input-group">
+                    <input
+                      id="repository"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder="owner / repository"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <button type="submit" aria-label="Open repository">
+                      ↗
+                    </button>
+                  </div>
+                  {inputError && (
+                    <p className="error-text" role="alert">
+                      {inputError}
+                    </p>
+                  )}
+                </form>
+                <div className="repo-caption">
+                  {session.data?.publicAccess &&
+                    'Public repositories are available without signing in. '}
+                  Private repositories need a GitHub App installation and your access.
+                  {session.data?.installUrl && (
+                    <>
+                      {' '}
+                      <a href={session.data.installUrl} target="_blank" rel="noreferrer">
+                        Connect repositories ↗
+                      </a>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
           </div>
           <div className="divider" />
           <span className="search-label">Refine this page</span>
@@ -551,7 +602,14 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
             ))}
           </nav>
           <div className="sidebar-footer">
-            {repository ? (
+            {offline ? (
+              <p>
+                <strong>Portable market</strong>
+                <br />
+                {savedSnapshot.data.pullRequests.length} captured pull requests. No GitHub App or
+                server required.
+              </p>
+            ) : repository ? (
               <button className="text-button" onClick={() => switchRepository('')}>
                 ← Visit the demo market
               </button>
@@ -602,16 +660,19 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
                     maxLength={MAX_SEARCH_LENGTH}
                     value={searchInput}
                     placeholder={
-                      repository
-                        ? 'Search GitHub… try label:bug or author:@me'
-                        : 'Search demo titles, authors, labels…'
+                      offline
+                        ? 'Search captured titles, authors, labels…'
+                        : repository
+                          ? 'Search GitHub… try label:bug or author:@me'
+                          : 'Search demo titles, authors, labels…'
                     }
                     aria-describedby="search-help"
                     onChange={(event) => {
                       setSearchInput(event.target.value);
-                      if (!repository) {
+                      if (!repository || offline) {
                         setSearch(event.target.value);
                         setSelected(null);
+                        if (offline) setPage(0);
                       }
                     }}
                   />
@@ -626,7 +687,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
                       ×
                     </button>
                   )}
-                  {repository && (
+                  {repository && !offline && (
                     <button
                       type="button"
                       className="search-options-toggle"
@@ -661,11 +722,13 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
               <div className="search-options-panel" id="search-options" hidden={!searchOptions}>
                 <div className="search-assistance">
                   <p id="search-help">
-                    {repository
-                      ? 'Open PRs in this repository. Use GitHub search syntax, then press Enter.'
-                      : 'Demo search filters titles, authors, and labels as you type.'}
+                    {offline
+                      ? 'Search captured titles, authors, and labels as you type.'
+                      : repository
+                        ? 'Open PRs in this repository. Use GitHub search syntax, then press Enter.'
+                        : 'Demo search filters titles, authors, and labels as you type.'}
                   </p>
-                  {repository && (
+                  {repository && !offline && (
                     <a
                       href="https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests"
                       target="_blank"
@@ -675,7 +738,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
                     </a>
                   )}
                 </div>
-                {repository && (
+                {repository && !offline && (
                   <fieldset
                     className="quick-searches"
 
@@ -707,7 +770,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
                   </fieldset>
                 )}
               </div>
-              {repository && search && (
+              {repository && !offline && search && (
                 <output className="visually-hidden">
                   {!canBrowse
                     ? 'Sign in to search GitHub'
@@ -726,6 +789,13 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
               )}
             </search>
             <div className="market-status">
+              {savedSnapshot && !savedSnapshot.complete && (
+                <p className="notice">
+                  Partial snapshot: {savedSnapshot.data.pullRequests.length} of{' '}
+                  {savedSnapshot.data.total} matching open pull requests captured. Generate a new
+                  snapshot with a higher page limit or narrower search for more results.
+                </p>
+              )}
               {authError && (
                 <div className="notice" role="alert">
                   {authError === 'configuration'
@@ -976,6 +1046,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
                     </div>
                     <h3>From the pull request</h3>
                     <PullRequestDescription
+                      offline={offline}
                       key={chosen.number}
                       body={chosen.body}
                       url={chosen.url}
@@ -1019,7 +1090,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
                     : ''}
                 </span>
                 <div>
-                  {repository && (
+                  {repository && !offline && (
                     <>
                       <button
                         onClick={() => void live.refetch()}
@@ -1059,7 +1130,7 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
                       Next 60 →
                     </button>
                   )}
-                  {buildSha && (
+                  {!offline && buildSha && (
                     <a
                       className="deployment-link"
                       href={`https://github.com/charpeni/brocante/commit/${buildSha}`}
