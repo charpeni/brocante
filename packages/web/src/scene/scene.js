@@ -375,6 +375,15 @@ function decoration() {
   }
   return result;
 }
+// SwiftShader and llvmpipe still create contexts despite failIfMajorPerformanceCaveat, so check the renderer name.
+function softwareRenderer() {
+  const gl = document.createElement('canvas').getContext('webgl2');
+  if (!gl) return false;
+  const info = gl.getExtension('WEBGL_debug_renderer_info');
+  const name = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : '';
+  gl.getExtension('WEBGL_lose_context')?.loseContext();
+  return /swiftshader|llvmpipe|software/i.test(name);
+}
 export class MarketWorld {
   constructor(container, onChoose, onHover) {
     this.container = container;
@@ -392,9 +401,11 @@ export class MarketWorld {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xe6e8d8);
     this.camera = new THREE.OrthographicCamera(-30, 30, 25, -25, 0.1, 180);
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    // Without GPU acceleration every frame is rasterized on the CPU; skip MSAA and shadow maps there.
+    const software = softwareRenderer();
+    this.renderer = new THREE.WebGLRenderer({ antialias: !software, alpha: false });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.6));
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.enabled = !software;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = false;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;

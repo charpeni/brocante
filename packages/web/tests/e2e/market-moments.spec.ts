@@ -91,6 +91,8 @@ test('ambient moments share pause and reduced motion and leave PR selection usab
   await page.keyboard.press('Tab');
   await expect(hiddenGift).not.toBeFocused();
   await page.emulateMedia({ reducedMotion: 'no-preference' });
+  // Reading MediaQueryList.matches before the next frame swallows its change event.
+  await page.evaluate(() => new Promise(requestAnimationFrame));
   await expect.poll(async () => (await state()).time).toBeGreaterThan(0.1);
   await page.getByRole('button', { name: 'Pause life', exact: true }).click();
   const paused = await state();

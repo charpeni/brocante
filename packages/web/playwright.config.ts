@@ -10,7 +10,10 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   use: {
     baseURL: 'http://localhost:4321',
-    trace: 'retain-on-failure',
+    // Screencast and DOM snapshots starve software WebGL on CI's small runners; keep actions, console and network.
+    trace: process.env.CI
+      ? { mode: 'retain-on-failure', screenshots: false, snapshots: false }
+      : 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
   projects: [

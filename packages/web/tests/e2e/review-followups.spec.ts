@@ -125,6 +125,8 @@ test('long owners leave repository names visible on narrow screens', async ({ pa
   ]) {
     await page.goto(`/${repository}`);
     await expect(page.locator('.repository-name')).toHaveText(repository.split('/')[1]);
+    // The pending sign-in label is wider than the signed-in actions and narrows the header.
+    await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     for (const width of [320, 360, 390, 600, 900, 1024]) {
       await page.setViewportSize({ width, height: 844 });

@@ -255,6 +255,9 @@ test('GPU allocations stabilize across shop replacements and completed bird visi
       () => {},
       () => {},
     );
+    // Software renderers skip shadow maps; enable them so the shadow target's cleanup stays covered.
+    world.renderer.shadowMap.enabled = true;
+    world.shadowsDirty = true;
     const life = new MarketLife(world);
     life.setEnabled(false);
     life.nextVisit = Infinity;
