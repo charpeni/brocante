@@ -30,6 +30,8 @@ import { MAX_SEARCH_LENGTH } from '../lib/market-search';
 import { signInPath } from '../lib/auth-location';
 import { currentSeason, type Season } from '../scene/landscape.js';
 
+const buildSha = import.meta.env.PUBLIC_BUILD_SHA;
+
 function BrocanteDefinition() {
   return (
     <p className="brocante-definition">
@@ -1056,6 +1058,18 @@ function App({ initialLocation, initialAuthError }: MarketplaceProps) {
                     >
                       Next 60 →
                     </button>
+                  )}
+                  {buildSha && (
+                    <a
+                      className="deployment-link"
+                      href={`https://github.com/charpeni/brocante/commit/${buildSha}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`View deployed commit ${buildSha.slice(0, 7)} on GitHub`}
+                      title={`Deployed commit ${buildSha}`}
+                    >
+                      {buildSha.slice(0, 7)}
+                    </a>
                   )}
                 </div>
               </footer>

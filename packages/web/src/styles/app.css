@@ -1242,6 +1242,16 @@ input::placeholder {
   font-size: 10px;
   padding: 5px 8px;
 }
+.deployment-link {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.deployment-link:hover {
+  color: var(--green);
+  text-decoration: underline;
+}
 .empty-state {
   padding: 80px 30px;
   text-align: center;
