@@ -2,7 +2,8 @@ import { defineConfig } from 'astro/config';
 import cloudflare from '@astrojs/cloudflare';
 import react from '@astrojs/react';
 
-const commitSha = process.env.CF_COMMIT_SHA || process.env.GITHUB_SHA || '';
+const commitSha =
+  process.env.WORKERS_CI_COMMIT_SHA || process.env.CF_COMMIT_SHA || process.env.GITHUB_SHA || '';
 const buildSha = /^[a-f0-9]{40}$/i.test(commitSha) ? commitSha.toLowerCase() : '';
 
 export default defineConfig({
