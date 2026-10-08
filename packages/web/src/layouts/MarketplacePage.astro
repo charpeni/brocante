@@ -15,6 +15,19 @@ const { repository } = Astro.props;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=stall-2" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=stall-2" sizes="180x180" />
     <title>{repository ? `${repository} · Brocante` : 'Brocante — a marketplace for pull requests'}</title>
+    {
+      import.meta.env.PROD && (
+        <script
+          is:inline
+          defer
+          src="https://pirsch.brocante.dev/static/files/pa.js"
+          id="pianjs"
+          data-hit-endpoint="https://pirsch.brocante.dev/p/pv"
+          data-event-endpoint="https://pirsch.brocante.dev/p/e"
+          data-session-endpoint="https://pirsch.brocante.dev/p/s"
+        />
+      )
+    }
   </head>
   <body>
     <Marketplace

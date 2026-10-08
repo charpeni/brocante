@@ -5,7 +5,7 @@ export const onRequest = defineMiddleware(async (_context, next) => {
   if (import.meta.env.PROD)
     response.headers.set(
       'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
+      "default-src 'self'; script-src 'self' 'unsafe-inline' https://pirsch.brocante.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://pirsch.brocante.dev; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
     );
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'same-origin');
